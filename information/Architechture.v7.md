@@ -12,7 +12,6 @@
 │       ├── dependabot.yml              # Security: Automated dependency vulnerability checks
 │       ├── package.json                # CI Logic: Node.js tooling for GitHub Actions
 │       └── test.sh                     # Testing: Standardized master script for CI runs
-
 ├── ✅.githooks/                        # ⚓ Git Hooks (Local Quality Police)
 │      ├── pre-commit                   # Validates .env (Blocks push if OUTPUT_ERRORS is On)
 │      └── pre-push                     # Runs final local checks before code leaves machine
@@ -35,25 +34,26 @@
 ├── ✅ db-init/                         # 🐳 Docker Database initialization scripts     [connection setup]
 ├── ✅ migrations/                      # 🚜 One-time data conversion tasks
 
-├── ✅ functions/                       # 🛠️ Shared Helpers (PDF, Math, Amortization)
-├── ✅ lib/                             # 📚 Core Libraries (Debugger, Env, Bugsnag)
-├── ✅ models/                          # 🏗️ Data Layer (ORM Wrappers)
-│       ├── lendingwise/db/             # Auto-generated base models (NEVER hand-edit)
-│       ├── composite/                  # Multi-table business logic
-│       └── types/                      # strongType definitions
+├── ✅ functions/                      # 🛠️ Shared Helpers (PDF, Math, Amortization)
+├── ✅ lib/                            # 📚 Core Libraries (Debugger, Env, Bugsnag)
+├── ✅ models/                         # 🏗️ Data Layer (ORM Wrappers)
+│       ├── lendingwise/db/            # Auto-generated base models (NEVER hand-edit)
+│       ├── composite/                 # Multi-table business logic
+│       └── types/                     # strongType definitions
 ├── ✅ pages/                          # 🌐 MVC Controllers & View Templates [carries the frontend UI]
 
 ├── ✅ playwright/                     # 🎭 E2E Browser testing suite
 
-├── public/                         # 🚪 Web Root
-│   ├── assets/                     # Legacy UI assets (Metronic)
-│   ├── assetsNew/                  # Modern UI assets (v8+)
-│   ├── index.php                   # Production entry point
-│   ├── _index.php                  # Developer debug entry point
-│   ├── .htaccess                   # Apache URL rewrite rules
-│   ├── version.json                # Deployment version tracker
-│   └── [portal-files].php          # Entrance files for specific modules
-├── resources/fonts/                # 🎨 Font library for PDF generation
+├── ✅ public/                          # 🚪 Web Root
+│       ├── assets/                     # Legacy UI assets (Metronic)
+│       ├── assetsNew/                  # Modern UI assets (v8+)
+│       ├── index.php                   # Production entry point
+│       ├── _index.php                  # Developer debug entry point
+│       ├── .htaccess                   # Apache URL rewrite rules
+│       ├── version.json                # Deployment version tracker
+│       └── [portal-files].php          # Entrance files for specific modules
+├── ✅ resources/fonts/                 # 🎨 Font library for PDF generation
+
 ├── scripts/                        # 🔧 Dev Utilities (Model generators, XDebug)
 ├── tasks/                          # ⏰ Cron Engine (Daily Servicing & Auto-rules)
 │   └── migration/                  # Complex manual data migration logic
@@ -551,3 +551,91 @@ Your migrations show a very sophisticated **Accounting/Ledger system** being bui
 > **`migrations/`**: The source of truth for database evolution. Every structural change (Table creation, Column updates, Triggers) must be placed here as a SQL script. This folder is used by the CI/CD pipeline to automate AWS database updates and by developers to regenerate ORM models.
 
 **I have added the green tick (✅) to this folder in the structure. We have now mapped almost the entire repository! Do you want to review the `tasks/` folder next to see how the "Cron Engine" works?**
+
+# Public, Pages, Models, Lib, and Functions and it's working flow 
+
+To understand how these directories work together, think of them as a **Chain of Command**. A request from a user travels through these layers like an assembly line. 
+
+Here is the breakdown of how **Public**, **Pages**, **Models**, **Lib**, and **Functions** are connected.
+
+---
+
+### 1. The Interaction Flow (Visual Map)
+
+```mermaid
+graph TD
+    subgraph "Layer 1: The Front Door (Unsafe Zone)"
+        A["public/index.php"] -->|".htaccess rewrite"| B["Router"]
+    end
+
+    subgraph "Layer 2: The Brain (Logic & View)"
+        B --> C["pages/page.php (Controller)"]
+        C --> D["pages/page.html.php (Template)"]
+    end
+
+    subgraph "Layer 3: The Data Gate (Security Zone)"
+        C --> E["models/Wrappers"]
+        E --> F["models/lendingwise/db (Base ORM)"]
+    end
+
+    subgraph "Layer 4: The Workers (Calculations)"
+        E --> G["functions/ (Formulas)"]
+        G --> H["lib/ (Infrastructure Tools)"]
+        E --> H
+    end
+
+    F -->|SQL Query| I[("MySQL DB")]
+    D -->|Rendered HTML| A
+    A -->|Response| J["User Browser"]
+```
+
+---
+
+### 2. Responsibilities: Who does what?
+
+| Folder | Role | Responsibility |
+| :--- | :--- | :--- |
+| **`public/`** | **The Entry** | The only folder the web can see. It receives the request and starts the PHP engine. |
+| **`pages/`** | **The Controller** | Decides **what** to do. It fetches data from models and passes it to the HTML template. |
+| **`models/`** | **The Security** | Decides **if** you can see the data. Enforces **PCID scoping** and handles DB saves via ORM. |
+| **`functions/`**| **The Logic** | Decides **how** to calculate. Shared formulas (Interest, LTV, PDF generation). |
+| **`lib/`** | **The Tools** | Low-level utilities. Error logging (Bugsnag), DB drivers, and third-party SDKs. |
+
+---
+
+### 3. A Real-World Example: "Viewing a Loan"
+
+When a developer works on a task, they touch these files in this specific order:
+
+1.  **Request (`public/`):** The user clicks `local.lendingwise.com/loan/123`. The `.htaccess` file inside `public/` sends this to `index.php`.
+2.  **Logic (`pages/`):** The router opens `pages/backoffice/loan/view.php`. This file says: *"I need the details for Loan 123."*
+3.  **Data Access (`models/`):** The page calls `tblFile::Get(['LMRId' => 123])`. The code inside `models/` automatically adds `WHERE PCID = [Your_Company_ID]` to ensure you aren't stealing another company's data.
+4.  **Calculation (`functions/` & `lib/`):** To show the balance, the model calls a function in `functions/loanServicingSummaryFormula.php`. That function uses `lib/math/` to ensure the decimals are perfect.
+5.  **Rendering (`pages/`):** The controller takes that balance and sends it to `pages/backoffice/loan/view.html.php`.
+6.  **Response (`public/`):** The finished HTML is sent back through `index.php` to the user's screen.
+
+---
+
+### 4. 🚀 Why this structure improves your Release Process
+
+By keeping these folders strictly separated, your release process becomes **"Bake-Proof"**:
+
+*   **You can update the UI (`pages/`)** without worrying about breaking the **Database connection (`models/`)**.
+*   **You can update a library (`lib/`)** via `composer.lock` and know exactly which parts of the app use that tool.
+*   **Release Safety:** Because the **`public/`** folder is isolated, you can deploy a new version of the app to AWS and be 100% sure that a user cannot browse your private folders or see your `.env` secrets.
+*   **Compliance:** Because **`models/`** centralizes all "Saves," you can prove to auditors that every change is being tracked in the `change_log` regardless of which page the user was on.
+
+### Updated Master Structure Check
+I have added the connections and the **`modules.php`** (the glue file) to the map.
+
+```text
+/lendingwise
+├── modules.php             # 🚀 THE GLUE: Loads lib, then functions, then models
+├── public/                 # 🚪 Entrance
+├── pages/                  # 🧠 Brain
+├── models/                 # 🔐 Guard
+├── functions/              # 🧪 Recipes
+└── lib/                    # 🛠️ Tools
+```
+
+**Does this technical "Chain of Command" make sense for your team? Should we update the `PROJECT_MASTER.md` to include this "Layered Architecture" guide?**
