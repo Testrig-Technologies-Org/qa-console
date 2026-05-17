@@ -15,9 +15,18 @@
 ├── ✅.githooks/                        # ⚓ Git Hooks (Local Quality Police)
 │      ├── pre-commit                   # Validates .env (Blocks push if OUTPUT_ERRORS is On)
 │      └── pre-push                     # Runs final local checks before code leaves machine
+├── ✅ .gitattributes                  # ⚓ Git settings (Forcing Unix line endings)
+├── ✅ .gitignore                      # 🚫 Security Filter (Blocking secrets & logs)
 
 ├── ✅ Resque/Job/ 🔴 [EMPTY]           # ⚙️ Planned for Asynchronous Workers
 
+├── ✅ _snyk/                           # 🛡️ Security Audit (Baseline: snyk-20230621.txt)
+
+├── ✅ db-init/                         # 🐳 Docker Database initialization scripts     [connection setup]
+├── ✅ database/                        # 🗄️ SQL Migrations (Deterministic day-based folders) [db working and schema handling]
+├── ✅ migrations/                      # 🚜 One-time data conversion tasks
+
+├── ✅ _config/public/                  # ⚙️ Legacy Config (Historical portal settings)
 ├── ✅ api_models/                      # 🧠 API Logic & Security Layer
 │      ├── Security.php                 # Central Auth/Encryption engine
 │      ├── UserDTO.php                  # Data object for user roles
@@ -26,46 +35,29 @@
 │      ├── app_user.php                 # System user data model
 │      ├── auth.php                     # Oauth code data model
 │      └── page_view.php                # Traffic & performance logger (SQL-based)
-├── ✅ _config/public/                  # ⚙️ Legacy Config (Historical portal settings)
+├── ✅ functions/                     # 🛠️ Shared Helpers (PDF, Math, Amortization)
+├── ✅ lib/                           # 📚 Core Libraries (Debugger, Env, Bugsnag)
+├── ✅ models/                        # 🏗️ Data Layer (ORM Wrappers)
+│       ├── lendingwise/db/           # Auto-generated base models (NEVER hand-edit)
+│       ├── composite/                # Multi-table business logic
+│       └── types/                    # strongType definitions
+├── ✅ pages/                         # 🌐 MVC Controllers & View Templates [carries the frontend UI]
+├── ✅ public/                        # 🚪 Web Root
+│       ├── assets/                   # Legacy UI assets (Metronic)
+│       ├── assetsNew/                # Modern UI assets (v8+)
+│       ├── index.php                 # Production entry point
+│       ├── _index.php                # Developer debug entry point
+│       ├── .htaccess                 # Apache URL rewrite rules
+│       ├── version.json              # Deployment version tracker
+│       └── [portal-files].php        # Entrance files for specific modules
+├── ✅ resources/fonts/               # 🎨 Font library for PDF generation
+├── ✅scripts/                        # 🔧 Dev Utilities (Model generators, XDebug)
+├── ✅tasks/                          # ⏰ Cron Engine (Daily Servicing & Auto-rules)
+│       └── migration/                # Complex manual data migration logic
 
-├── ✅ _snyk/                           # 🛡️ Security Audit (Baseline: snyk-20230621.txt)
-
-├── ✅ database/                        # 🗄️ SQL Migrations (Deterministic day-based folders) [db working and schema handling]
-├── ✅ db-init/                         # 🐳 Docker Database initialization scripts     [connection setup]
-├── ✅ migrations/                      # 🚜 One-time data conversion tasks
-
-├── ✅ functions/                      # 🛠️ Shared Helpers (PDF, Math, Amortization)
-├── ✅ lib/                            # 📚 Core Libraries (Debugger, Env, Bugsnag)
-├── ✅ models/                         # 🏗️ Data Layer (ORM Wrappers)
-│       ├── lendingwise/db/            # Auto-generated base models (NEVER hand-edit)
-│       ├── composite/                 # Multi-table business logic
-│       └── types/                     # strongType definitions
-├── ✅ pages/                          # 🌐 MVC Controllers & View Templates [carries the frontend UI]
-
-├── ✅ playwright/                     # 🎭 E2E Browser testing suite
-
-├── ✅ public/                          # 🚪 Web Root
-│       ├── assets/                     # Legacy UI assets (Metronic)
-│       ├── assetsNew/                  # Modern UI assets (v8+)
-│       ├── index.php                   # Production entry point
-│       ├── _index.php                  # Developer debug entry point
-│       ├── .htaccess                   # Apache URL rewrite rules
-│       ├── version.json                # Deployment version tracker
-│       └── [portal-files].php          # Entrance files for specific modules
-├── ✅ resources/fonts/                 # 🎨 Font library for PDF generation
-
-├── scripts/                        # 🔧 Dev Utilities (Model generators, XDebug)
-├── tasks/                          # ⏰ Cron Engine (Daily Servicing & Auto-rules)
-│   └── migration/                  # Complex manual data migration logic
-
-├── docs/                           # 📖 Documentation Hub
-│   ├── ARCHITECTURE/               # System maps & compliance docs
-│   ├── DATA/                       # Data dictionaries & ERDs
-│   ├── DEV/                        # Coding standards & AI skills index
-│   └── RELEASE/                    # Deployment checklists & pipeline flow
-
+├── ✅ playwright/                         # 🎭 E2E Browser testing suite
 ├── ✅ test-results/      🔴 [EMPTY]       # 🧪 QA Output (Artifacts from CI/CD runs) 
-
+├── ✅ multi-reporter-config.json          # 🧪 Test reporting configuration  ---> this is not require 🔴
 ├── ✅ tests/                              # 🧪 Unit Testing (PHPUnit suite)
 |      ├── files/                          # 📂 Test Stubs & Mock Data
 │      |   └── test.xlsx                   # Mock spreadsheet for import testing
@@ -86,35 +78,40 @@
 │      └── [SandboxTests].php              # Work-in-progress or example tests (Murali.php, josue.php)
 ├── ✅ phpunit.xml                         # 🧪 PHPUnit test runner configuration
 
-├── ✅ .deepsource.toml                # ✅ Quality Gate (Static analysis configuration)
-├── ✅ .dockerignore                   # 🐳 Docker Filter (Image optimization)
-├── ✅ .env.default                    # 🔑 Master Environment Variable Template
-├── ✅ .env.example                    # 🔑 API Environment Template
-├── ✅ .env.local                      # 🔑 Machine-specific overrides (Untracked)
-├── ✅ .gitattributes                  # ⚓ Git settings (Forcing Unix line endings)
-├── ✅ .gitignore                      # 🚫 Security Filter (Blocking secrets & logs)
-├── ✅ Dockerfile                      # 🐳 Build Recipe (PHP 8.3, Apache, LibreOffice)
-├── ✅ docker-compose.yml              # 🐳 Local Orchestration (App & DB services)
-├── ✅ Makefile                        # 🕹️ Master Automation (make setup-local, make up)
-├── ✅ composer.json                   # 📦 PHP Dependencies (Guzzle, JWT, TCPDF)
-├── ✅ composer.lock                   # 📦 Locked dependency versions             ---> this is not included 🔴
-├── ✅ composer.phar                   # 📦 PHP Composer binary
-
-├── config.php                         # ⚙️ Constant definitions for environment variables
-├── constants.php                      # ⚙️ Global system constants
-├── custom-php.ini                     # ⚙️ PHP container configuration overrides
-├── js_version.php                     # 🚀 Asset cache-busting (Git SHA based)
-├── modules.php                        # 🚀 App Bootstrap (Autoloading & Core Init)
-├── modules_functions_pdf.php          # 🚀 PDF-specific bootstrap
-├── params.php                         # ⚙️ Legacy system parameters
-
+├── docs/                           # 📖 Documentation Hub
+│   ├── ARCHITECTURE/               # System maps & compliance docs
+│   ├── DATA/                       # Data dictionaries & ERDs
+│   ├── DEV/                        # Coding standards & AI skills index
+│   └── RELEASE/                    # Deployment checklists & pipeline flow
 ├── AGENTS.md                          # 🗺️ AI Agent Master Routing & Navigation
 ├── CLAUDE.md                          # 📜 AI Git Workflow & Coding Rules
 ├── Master-MD-File-instructions.txt    # 📋 Documentation standards for Markdown
 ├── PROJECT_MASTER.md                  # 📑 End-to-end Release & Operational Manifest
 ├── Review.md                          # 🟠 PR Review Standards (P0 Blockers)
 
-├── ✅ multi-reporter-config.json      # 🧪 Test reporting configuration  ---> this is not require 🔴
+├── ✅ .deepsource.toml                # ✅ Quality Gate (Static analysis configuration)
+
+├── ✅ .env.default                    # 🔑 Master Environment Variable Template
+├── ✅ .env.example                    # 🔑 API Environment Template
+├── ✅ .env.local                      # 🔑 Machine-specific overrides (Untracked)
+
+├── ✅ Dockerfile                      # 🐳 Build Recipe (PHP 8.3, Apache, LibreOffice)
+├── ✅ docker-compose.yml              # 🐳 Local Orchestration (App & DB services)
+├── ✅ .dockerignore                   # 🐳 Docker Filter (Image optimization)
+├── ✅ Makefile                        # 🕹️ Master Automation (make setup-local, make up)
+
+├── ✅ composer.json                   # 📦 PHP Dependencies (Guzzle, JWT, TCPDF)
+├── ✅ composer.lock                   # 📦 Locked dependency versions             ---> this is not included 🔴
+├── ✅ composer.phar                   # 📦 PHP Composer binary
+
+├── ✅ config.php                         # ⚙️ Constant definitions for environment variables
+├── ✅ constants.php                      # ⚙️ Global system constants
+├── ✅ custom-php.ini                     # ⚙️ PHP container configuration overrides
+├── ✅ js_version.php                     # 🚀 Asset cache-busting (Git SHA based)
+├── ✅ modules.php                        # 🚀 App Bootstrap (Autoloading & Core Init)
+├── ✅ modules_functions_pdf.php          # 🚀 PDF-specific bootstrap
+├── ✅ params.php                         # ⚙️ Legacy system parameters
+
 ├── ✅ README.md                       # 📖 General Project Orientation
 ├── ✅ pnpm-lock.yaml                  # 🧪 Alternate Node.js lock file
 ├── ✅ package-lock.json               # 🧪 Node.js locked dependencies
@@ -639,3 +636,416 @@ I have added the connections and the **`modules.php`** (the glue file) to the ma
 ```
 
 **Does this technical "Chain of Command" make sense for your team? Should we update the `PROJECT_MASTER.md` to include this "Layered Architecture" guide?**
+
+
+# Scripts Folder
+
+The **`scripts/`** folder is the **"Automated Toolbox"** of your repository. While the `public/` folder is for the users and the `models/` folder is for the business logic, the `scripts/` folder is for the **Developers and the CI/CD Pipeline.**
+
+In a professional release process, you need this folder to automate repetitive, error-prone tasks. Here is the breakdown of why these specific files are there:
+
+### 1. The ORM Engine (`generateModelsV2.php`)
+This is the most important script in the folder for your release process.
+*   **Why:** Since LendingWise uses a strict ORM, you cannot just manually write PHP classes for your database tables. 
+*   **Release Role:** Every time a migration is added to the `database/` folder, this script is run (via `make gen-db-models`) to scan the MySQL schema and rewrite the PHP models. This ensures the code always matches the database.
+
+### 2. Environment Preparation (`clean stage db.sql.txt`)
+You have scripts to clean the "Staging" and "Testing" databases.
+*   **Why:** Before a major release, you often want to refresh your Staging environment with fresh data but remove sensitive customer PII (Personal Identifiable Information) to stay compliant.
+*   **Release Role:** These scripts automate the "Sanitization" of the database before QA testers or AI agents start verifying the new release.
+
+### 3. API Transparency (`swagger.php`)
+*   **Why:** You have an API (`api_models/`). External partners need to know how to use it.
+*   **Release Role:** This script automatically generates your **API Documentation**. To improve your release process, this script should run every time you deploy so that the documentation is never out of date.
+
+### 4. Infrastructure & Debugging (`check-xdebug.sh`, `xdebug.ini`)
+*   **Why:** Developers need to find bugs. 
+*   **Role:** These files configure the Docker container to allow "Step Debugging." They ensure that the developer's local environment is set up to catch the **Snyk vulnerabilities** (like those SQL injections) during the "Local Dev" phase of your flow.
+
+### 5. Document & PDF Management (`install-tcpdf-fonts.php`, `generatePDFs.php`)
+*   **Why:** LendingWise handles legal contracts and loan packages.
+*   **Role:** These scripts ensure the server has the correct fonts and templates installed to generate legal-grade PDFs. Without these, your E-Sign features would fail in production.
+
+---
+
+### 🛠 How it connects to your Release Flow
+
+In your **LendingWise Release Process**, the `scripts/` folder is used at two critical points:
+
+1.  **Local Dev Phase:** Developers use `generateModelsV2.php` and `check-xdebug.sh` to build and verify their work.
+2.  **AWS Deployment Phase:** The GitHub Action (`.github/workflows/`) calls `swagger.php` and `install-tcpdf-fonts.php` to prepare the Docker image before it is pushed to AWS ECR.
+
+### Final Aggregated Structure Update
+I have added the **Scripts Toolbox** to your master list.
+
+```text
+/lendingwise
+├── ...
+├── scripts/                        # 🔧 The Toolbox (Automation & Maintenance)
+│   ├── generateModelsV2.php        # 🏗️ ORM Generator (Crucial for DB Sync)
+│   ├── swagger.php                # 📖 API Doc Generator
+│   ├── clean stage db.sql.txt      # 🧹 DB Sanitizer (For Staging releases)
+│   └── xdebug.ini                  # 🐞 Debug Config
+├── ...
+```
+
+**Summary for your Docs:**
+> **`scripts/`**: Houses all automation logic that is NOT part of the runtime application. This includes ORM model generation, API documentation builders, and database sanitization tools used during the Staging and Production release cycles.
+
+**Does this clarify why your repo has a separate scripts folder? Should we look at how the `tasks/` folder (The Cron Engine) uses these scripts?**
+
+# Tasks
+
+To follow your **Documentation Conventions & Standards**, I have defined the **`tasks/`** folder. In the LendingWise architecture, this folder is the **"Engine Room"** of the platform.
+
+While `public/` handles users and `models/` handles logic, **`tasks/`** handles **Asynchronous Background Processing** (often called Cron Jobs).
+
+---
+
+<!--
+Owner: Engineering Team
+Last reviewed: 2026-05-17 (Post-Tasks Directory Audit)
+Scope: Documentation of the background processing engine and scheduled task logic.
+-->
+
+# ⏰ Tasks directory (The cron engine)
+
+The purpose of the `/tasks` directory is to house standalone PHP scripts designed to run via the Command Line Interface (CLI). These scripts perform heavy-lifting operations that should not happen in the browser to avoid slowing down the user experience.
+
+## 🚀 Why LendingWise needs this folder
+
+In a fintech platform, many operations must happen automatically based on time, not just user clicks.
+
+### 1. Financial automation (`ServicingDaily.php`)
+- **Reason:** Interest and amortization schedules must be updated every night at midnight.
+- **Workflow:** A system timer (Cron) executes `ServicingDaily.php`. It calculates the daily interest for thousands of loans without any human intervention.
+
+### 2. High-volume communication (`send_grid_cron.php`)
+- **Reason:** Sending 500 emails at once would make a web page "hang" or time out.
+- **Workflow:** The app places email requests in a "Queue." This task picks them up and sends them to SendGrid in the background, keeping the UI fast for the user.
+
+### 3. Business rules engine (`AutomatedRulesV2.php`)
+- **Reason:** LendingWise allows companies to set "If/Then" rules (e.g., *"If a loan is past due for 5 days, send an SMS"*).
+- **Workflow:** `AutomatedRulesV2.php` constantly monitors the database for these conditions and triggers the appropriate action.
+
+### 4. System health & maintenance (`diskMonitor.php`)
+- **Reason:** The platform handles massive amounts of documents (via the `upload` repo). We must ensure the AWS EC2 instance doesn't run out of space.
+- **Workflow:** `diskMonitor.php` checks storage levels and alerts the Engineering Team before the system crashes.
+
+## 📁 Key task categories
+
+| Category | Key Files | Release Impact |
+| :--- | :--- | :--- |
+| **Servicing** | `ServicingDaily.php`, `recalcServicing.php` | **Critical.** Primary revenue logic. |
+| **Communication** | `send_grid_cron.php`, `send_messages.php` | **High.** Handles all outbound notifications. |
+| **Migrations** | `/tasks/migration/` | **High.** Handles one-time data updates. |
+| **Analytics** | `getAPIUsage.php`, `getFileCounts.php` | **Medium.** Powers the Data Warehouse. |
+
+## 🛠️ Operational flow
+
+Developers use the [Makefile](/Makefile) to interact with these tasks during development:
+
+1. **Debugging:** If an automated email isn't sending, a developer "jumps" into the container and runs the task manually:
+   ```bash
+   make exec-web-app
+   php tasks/send_grid_cron.php
+   ```
+2. **Setup:** The `db-init/` folder and `tasks/migration/` scripts ensure that a new AWS environment is populated with the necessary system data to run these crons.
+
+## 🧪 Unknowns and placeholders
+
+`<<UNKNOWN>>` **Cron Schedule:** The master crontab configuration (the timing of these tasks) is not currently stored in a dedicated file in the root.
+
+**Discovery Steps:**
+1. Files to read: Check for a `crontab` file or `docker-compose.yml` entry point.
+2. Search patterns: `grep -r "php tasks/" .`
+3. Expected Outcome: Create a `CRON_SCHEDULE.md` to document exactly when each script in this folder should run.
+
+---
+
+## ## See Also
+- [CLAUDE.md](/CLAUDE.md) - Rules for task-based branching.
+- [api_models/page_view.php](/api_models/page_view.php) - Where these tasks log their performance.
+- [PROJECT_MASTER.md](/PROJECT_MASTER.md) - The end-to-end release pipeline.
+
+**Last Updated:** 2026-05-17 (Post-Tasks Audit)
+**Owner:** Engineering Team
+
+To improve your release process and document "all app details in Git," we need to define the **Technical Wiring** of these folders. This isn't just a list of files; it is a "Chain of Command."
+
+Here is the breakdown of how these specific directories are connected and the logic flow they follow.
+
+---
+
+### 1. The Request Connectivity Flow (The "Chain of Command")
+
+When a user or a cron job interacts with LendingWise, the data travels through the layers in this specific order:
+
+```mermaid
+graph TD
+    %% Entry Points
+    User(["User Browser"]) -->|URL Request| Public["/public (Web Root)"]
+    Cron(["AWS EventBridge / Cron"]) -->|CLI Command| Tasks["/tasks (Cron Engine)"]
+
+    %% Routing
+    Public -->|.htaccess| index["index.php / _index.php"]
+    index --> Modules["modules.php (The Glue)"]
+    Tasks --> Modules
+
+    %% The Glue Loading Order
+    Modules -->|1. Loads| Lib["/lib (Third-party & Core)"]
+    Modules -->|2. Loads| Functions["/functions (Domain Math)"]
+    Modules -->|3. Autoloads| Models["/models (Business Objects)"]
+
+    %% Application Execution
+    index --> Pages["/pages (UI & Controllers)"]
+    Pages -->|Requests Data| Models
+    Models -->|Uses Formulas| Functions
+    Functions -->|Uses SDKs| Lib
+    
+    %% Assets
+    Pages -->|Uses UI Kit| Assets["/public/assetsNew"]
+    Functions -->|Uses Fonts| Fonts["/resources/fonts"]
+
+    %% Output
+    Models -->|SQL| DB[(MySQL DB)]
+    Pages -->|Rendered HTML| User
+```
+
+---
+
+### 2. Deep Dive: Connectivity & Usage Rules
+
+#### **A. The Entry Layers (`/public` & `/tasks`)**
+*   **Connectivity:** These are the only two "Starting Lines."
+*   **Rule:** Files in `/public` handle web traffic. Files in `/tasks` handle time-based traffic. Neither should contain "Business Logic"—they should only call Models.
+
+#### **B. The "Glue" Layer (`modules.php` & `/lib`)**
+*   **Connectivity:** `modules.php` is required by **every** entry point. It defines the environment.
+*   **Flow:** It loads `lib/env.php` first to see if it's on AWS or Local. Then it starts the `lib/Bugsnag.php` to catch errors in the next layers.
+
+#### **C. The Logic Trinity (`/models`, `/functions`, `/lib`)**
+*   **How they work together:** 
+    *   **`/lib`** is "dumb" (e.g., `Bugsnag` doesn't know what a "Loan" is; it just knows how to report an error).
+    *   **`/functions`** is "smart math" (e.g., `loanServicingSummaryFormula.php` knows how to calculate interest but doesn't know how to save it to a database).
+    *   **`/models`** is the "Manager" (e.g., `tblFile.php` takes the math from `functions`, uses the logger from `lib`, and saves the result to the DB).
+
+#### **D. The UI Layer (`/pages`)**
+*   **Connectivity:** Connected to `/public` for the request and `/models` for the data.
+*   **Flow:** The `.php` file (Controller) fetches data from a Model. It then "includes" the `.html.php` file (Template) to display the frontend using Bootstrap/Metronic assets from `/public/assetsNew`.
+
+#### **E. The Maintenance Layer (`/scripts` & `/database`)**
+*   **Connectivity:** These work "Outside" the live request flow.
+*   **Usage:** `scripts/generateModelsV2.php` is connected to your MySQL schema. It writes code *into* the `/models/lendingwise/db/` folder. This is a **Dev-Time** connection.
+
+---
+
+### 3. 🚀 Release Process Impact
+
+To improve your release process, you must ensure this connectivity is never broken:
+
+1.  **Dependency Rule:** Never allow a file in `/lib` to depend on a file in `/pages`. (Infrastructure should never depend on UI).
+2.  **The "StrongType" Rule:** In your `/models/types/`, you use `strongType`. This ensures that when data flows from a **Task** to a **Model**, the data type (int/string) is locked, preventing the calculation errors mentioned in your `lib/math` logs.
+3.  **PDF Release Path:** If you update a legal contract, you must check `/functions/legalContractPdf.php` AND ensure the correct fonts exist in `/resources/fonts/`. If the fonts are missing in the Git repo, the AWS Docker build will fail.
+
+---
+
+### 📑 Updated Master Manifest Section: "System Connectivity"
+
+Add this to your **`PROJECT_MASTER.md`**:
+
+> ### 🔌 Component Inter-Dependency
+> | Layer | Depends On | Purpose |
+> | :--- | :--- | :--- |
+> | **Tasks / Public** | Modules.php | Entry points for all system actions. |
+> | **Pages (UI)** | Models, Assets | Fetches data and presents it to the user. |
+> | **Models (ORM)** | Functions, Lib, DB | Enforces security (PCID) and handles data persistence. |
+> | **Functions** | Lib | Pure mathematical and document-generation logic. |
+> | **Lib** | Composer | Low-level infrastructure and 3rd party SDKs. |
+
+**Does this "Chain of Command" clarify how the different parts of your code work together? If so, we can now look at the `pages/` controllers to see how they implement the PCID security rules.**
+
+# LendingWise PHP Bootstrap Layer
+```text
+├── config.php                         # ⚙️ Constant definitions for environment variables
+├── constants.php                      # ⚙️ Global system constants
+├── custom-php.ini                     # ⚙️ PHP container configuration overrides
+├── js_version.php                     # 🚀 Asset cache-busting (Git SHA based)
+├── modules.php                        # 🚀 App Bootstrap (Autoloading & Core Init)
+├── modules_functions_pdf.php          # 🚀 PDF-specific bootstrap
+├── params.php                         # ⚙️ Legacy system parameters
+```
+## Overview
+
+The bootstrap layer initialises the entire application before any business logic runs.
+It resolves environment variables into constants, registers class autoloaders, stamps
+asset versions, and wires up third-party integrations (email, fax, APIs, storage).
+
+---
+
+## File Reference
+
+### `modules.php` — Entry Point
+
+The first file required by `index.php`. Responsibilities:
+
+- Loads `vendor/autoload.php` (Composer PSR-4)
+- Registers **two `spl_autoload_register` handlers**
+  - Handler 1 — namespace-to-path mapping (`models\Foo` → `models/Foo.php`)
+  - Handler 2 — fallback strip of `models/` prefix for legacy class names
+- Requires helper libraries: `debugger.php`, `env.php`, `bugsnag.php`, `Debug.php`
+- Requires shared function files: math, PDF, image utilities, loan servicing formulas
+
+---
+
+### `config.php` — Environment Configuration Hub
+
+Read after `modules.php`. Converts every `$_ENV` variable into a PHP `define()` constant.
+
+#### Constant groups
+
+| Group | Examples | Source env vars |
+|---|---|---|
+| **App** | `CONST_ENVIRONMENT`, `CONST_DEBUG`, `CONST_SITE_URL` | `APP_ENV`, `APP_DEBUG`, `APP_URL` |
+| **Database** | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` |
+| **Encryption** | `MCRYPT_KEY`, `CYPHER_KEY`, `MASTER_SECRET_KEY` | `MCRYPT_KEY`, `CYPHER_KEY`, `MASTER_SECRET_KEY` |
+| **Email** | `CONST_EMAIL_FROM`, `CONST_EMAIL_SUPPORT`, `CONST_EMAIL_ADMIN` | `EMAIL_FROM`, `EMAIL_SUPPORT`, `EMAIL_ADMIN` |
+| **SendGrid** | `CONST_SENDGRID_API_KEY`, `CONST_SENDGRID_SPOOF_API_KEY` | `SENDGRID_API_KEY`, `SENDGRID_SPOOF_API_KEY` |
+| **File paths** | `CONST_PATH_PC_UP_DOC`, `CONST_PATH_TRUST_DOCS`, `CONST_PATH_LMR_FILE_DOCS` | `PATH_PC_UP_DOC`, `TRUST_DOC_FLD`, `LMR_FILE_DOC_FLD` |
+| **Twilio** | `TWILIO_2FA_SID`, `TWILIO_2FA_TOKEN`, `TWILIO_VERIFY_SERVICE_ID` | `TWILIO_2FA_SID`, `TWILIO_2FA_TOKEN` |
+| **Google** | `CONST_API_KEY_GOOGLE_MAPS`, `GOOGLE_CAPTCHA_SECRET_KEY` | `GOOGLE_MAPS_API_KEY`, `GOOGLE_CAPTCHA_SECRET_KEY` |
+| **Third-party APIs** | `ACQUALIFY_API_TOKEN`, `ALOWARE_API_TOKEN`, `CUSTIFY_API_KEY` | Various `*_API_TOKEN` / `*_API_KEY` vars |
+| **Redis / WebSocket** | `CONST_REDIS_SERVER`, `WEBSOCKET_SERVER`, `WEBSOCKET_PORT` | `REDIS_SERVER`, `WEBSOCKET_SERVER` |
+| **Performance** | `SLOW_QUERY_SECONDS`, `SLOW_PAGE_SECONDS` | `SLOW_QUERY_SECONDS`, `SLOW_PAGE_SECONDS` |
+
+#### Environment-branched constants
+
+Some constants resolve differently per environment:
+
+```
+CONST_ENVIRONMENT = development | staging | production
+    └── CONST_API_ACCESS_PC       → 338       | 1         | 3946
+    └── CONST_PRE_APPROVAL_PACKAGE_IDS → [766] | [791]    | [773]
+    └── CONST_BORROWER_MISSING_DOC_PACKAGE_ID → [783,825] | [808,846] | [788,826]
+```
+
+#### SMTP / SendGrid wiring
+
+`config.php` builds two arrays and passes them to `SMTPInfo::Init()`:
+
+- `$SMTPInfoArray` — host/username/password per sender address (SMTP fallback)
+- `$SMTPAPIInfoArray` — SendGrid API key per sender address (preferred path)
+
+Sender identities: `CONST_EMAIL_FROM`, `CONST_EMAIL_SPOOFING`, `CONST_EMAIL_MARKETING`, `CONST_EMAIL_SMS`
+
+#### Internal requires
+
+```
+config.php
+  ├── require_once 'constants.php'
+  └── require_once 'js_version.php'
+```
+
+---
+
+### `constants.php` — Static Constants Placeholder
+
+Intentionally blank. Reserved for hard-coded constants that should not depend on
+`$_ENV`. Currently contains no definitions.
+
+---
+
+### `js_version.php` — Asset Cache Buster
+
+Called from inside `config.php`. Uses `Git::gitHash()` to read the current commit SHA
+and defines:
+
+- `CONST_JS_VERSION` — appended as a query string to JS asset URLs
+- `CONST_CSS_VERSION` — appended as a query string to CSS asset URLs
+
+Every deployment changes the hash, forcing browsers to re-fetch assets.
+
+---
+
+### `custom-php.ini` — PHP Runtime Overrides
+
+Copied into `/usr/local/etc/php/conf.d/` by the Dockerfile. Key overrides:
+
+| Setting | Value | Reason |
+|---|---|---|
+| `display_errors` | `On` | Visible errors in local/dev |
+| `error_reporting` | `E_ALL` | Catch everything |
+| `max_input_vars` | `10000` | Large loan application forms |
+| `output_buffering` | `4096` | Controlled output flushing |
+| `serialize_precision` | `-1` | Lossless float serialisation |
+
+---
+
+### `params.php` — Legacy Per-Client Feature Flags
+
+All lines are commented out. Originally contained per-PCID (per-company) overrides
+for UI behaviour, email routing, document package IDs, and field visibility rules.
+Kept for historical reference. Marked `// NOTE: DO NOT EDIT THIS FILE`.
+
+---
+
+## How the Environment Variable Chain Works
+
+```
+.env file  (local)
+    │
+    ▼
+docker-compose environment: block
+    │  DB_HOST, DB_NAME, DB_USER, DB_PASS, APP_ENV, ...
+    ▼
+Container $_ENV
+    │
+    ▼
+config.php  define('DB_HOST', $_ENV['DB_HOST'] ?? null)
+    │
+    ▼
+Application constants  DB_HOST, CONST_ENVIRONMENT, CONST_SENDGRID_API_KEY, ...
+```
+
+The same codebase runs across all environments — only the `.env` values change.
+
+---
+
+## Bootstrap Load Order
+
+```
+index.php
+  ├── require 'modules.php'
+  │     ├── vendor/autoload.php
+  │     ├── lib/debugger.php
+  │     ├── lib/env.php
+  │     ├── lib/bugsnag.php
+  │     ├── lib/Debug.php
+  │     ├── spl_autoload_register (namespace handler)
+  │     ├── spl_autoload_register (legacy models/ handler)
+  │     └── functions/*.php  (math, pdf, image, loan servicing)
+  │
+  └── require 'config.php'
+        ├── define() — all ENV-backed constants
+        ├── require_once 'constants.php'  (blank placeholder)
+        ├── require_once 'js_version.php'  (Git::gitHash → JS/CSS version)
+        └── SMTPInfo::Init($SMTPInfoArray, $SMTPAPIInfoArray)
+```
+
+---
+
+## Key Design Decisions
+
+**No hardcoded credentials** — every secret defers to `$_ENV` with `?? null` fallback,
+so the codebase is safe to commit and works across local, staging, and production without
+code changes.
+
+**Constants over variables** — using `define()` makes configuration immutable at runtime.
+No code can accidentally reassign `DB_HOST` mid-request.
+
+**Two autoloader strategy** — the primary handler uses the correct namespace path; the
+secondary handler strips `models/` for legacy classes that predate the namespace
+refactor. This lets new and old code coexist during migration.
+
+**Git hash as version** — ties asset cache invalidation directly to the deploy, with
+zero manual version bumping required.
