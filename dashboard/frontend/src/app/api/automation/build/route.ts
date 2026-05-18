@@ -1,0 +1,80 @@
+import { NextResponse } from 'next/server';
+import { eq, and } from 'drizzle-orm';
+import { db } from '../../../../../db';
+import { automationBuilds, projects } from '../../../../../db/schema';
+
+export async function POST(req: Request) {
+  try {
+    const apiKey = req.headers.get('x-api-key');
+    if (!apiKey || apiKey !== process.env.AUTOMATION_API_KEY) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { project_id, environment, type, session_id } = body;
+
+    if (!project_id) {
+      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 });
+    }
+
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, Number(project_id)),
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    if (session_id) {
+      const existingBuild = await db.query.automationBuilds.findFirst({
+        where: and(
+          eq(automationBuilds.projectId, Number(project_id)),
+          eq(automationBuilds.sessionId, session_id)
+        ),
+      });
+
+      if (existingBuild) {
+        return NextResponse.json({
+          success: true,
+          buildId: existingBuild.id,
+          projectId: project_id,
+          organizationId: project.organizationId,
+        });
+      }
+    }
+    const insertValues = {
+      projectId: Number(project_id),
+      organizationId: project.organizationId,
+      sessionId: session_id || null,
+      environment: environment || 'dev',
+      status: 'running',
+      type: type || 'playwright',
+    };
+
+    const result = await db.insert(automationBuilds)
+      .values(insertValues)
+      .onDuplicateKeyUpdate({
+        set: { status: 'running' }
+      });
+    let finalBuildId = (result as any).lastInsertId;
+
+    if (!finalBuildId && session_id) {
+      const fallback = await db.query.automationBuilds.findFirst({
+        where: and(
+          eq(automationBuilds.projectId, Number(project_id)),
+          eq(automationBuilds.sessionId, session_id)
+        ),
+      });
+      finalBuildId = fallback?.id;
+    }
+    return NextResponse.json({
+      success: true,
+      buildId: finalBuildId,
+      projectId: project_id,
+      organizationId: project.organizationId,
+    });
+
+  } catch (error: any) {
+    console.error('CRITICAL_PIPELINE_ERROR:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
