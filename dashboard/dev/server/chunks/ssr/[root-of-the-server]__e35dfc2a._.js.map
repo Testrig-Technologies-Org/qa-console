@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/testrig/Documents/Lendinwise/sample-repo/dashboard/frontend/src/app/page.tsx"],"sourcesContent":["// app/page.tsx\nimport { redirect } from \"next/navigation\";\n\nexport default function Home() {\n  // Automatically send users to the TestCase Manager\n  redirect(\"/dashboard\");\n}"],"names":[],"mappings":";;;;AAAA,eAAe;AACf;AAAA;;AAEe,SAAS;IACtB,mDAAmD;IACnD,IAAA,iMAAQ,EAAC;AACX"}}]
-}
