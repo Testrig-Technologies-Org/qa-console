@@ -430,11 +430,6 @@ export async function uploadMasterTestCases(data: any[], projectId: number) {
   }
 }
 
-
-
-
-
-
 export async function getPlaywrightTrend(projectId?: number) {
   try {
     const { userId } = await auth();
