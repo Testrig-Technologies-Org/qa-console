@@ -1,5 +1,6 @@
 import { mysqlTable, text, timestamp, int, json, varchar, uniqueIndex, index } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 
 /* -------------------- CLERK INTEGRATION TABLES -------------------- */
 
@@ -51,11 +52,20 @@ export const projects = mysqlTable('projects', {
   description: text('description'),
   type: varchar('type', { length: 50 }).notNull(), // 'cypress' | 'playwright'
   environment: varchar('environment', { length: 50 }).default('production'),
+  // Per-project secret used by automation clients (e.g. qa-console-playwright-reporter)
+  // to authenticate against the /api/automation/* routes. Nullable at the DB level so
+  // existing rows survive the migration; always populated for new rows via $defaultFn
+  // and backfilled for old rows in the migration itself.
+  apiKey: varchar('api_key', { length: 128 }).unique().$defaultFn(() => generateProjectApiKey()),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   orgIdx: index('project_org_idx').on(table.organizationId),
 }));
+
+export function generateProjectApiKey(): string {
+  return `qac_live_${randomBytes(24).toString('hex')}`;
+}
 
 // 5. TEST CASES (Linked to Project)
 export const testCases = mysqlTable('test_cases', {

@@ -1,7 +1,7 @@
 export interface QAConsoleReporterOptions {
   /** Base URL of your QA Console dashboard deployment, e.g. "https://qa-console.yourcompany.com" */
   baseUrl: string;
-  /** API key issued by QA Console — must match the dashboard's AUTOMATION_API_KEY */
+  /** Your project's API key, shown on its setup screen in the QA Console dashboard */
   apiKey: string;
   /** Numeric project ID as shown in the QA Console dashboard */
   projectId: number;

@@ -1,8 +1,9 @@
 'use client';
 import React, { useState } from "react";
-import { Database, Shield, Loader2, ChevronRight, X } from "lucide-react"; 
+import { Database, Shield, Loader2, ChevronRight, X, CheckCircle2 } from "lucide-react";
 import { createProject } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import { ProjectSetupPanel } from "./ProjectSetupPanel";
 
 export function RegisterProjectModal({ isOpen, onClose, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -12,22 +13,67 @@ export function RegisterProjectModal({ isOpen, onClose, onSuccess }: any) {
     environment: 'production',
     description: ''
   });
+  const [created, setCreated] = useState<{ id: number; apiKey: string } | null>(null);
 
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    setCreated(null);
+    setFormData({ name: '', type: 'cypress', environment: 'production', description: '' });
+    onClose();
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await createProject(formData);
+      const res = await createProject(formData);
       onSuccess();
-      onClose();
+      if (res.success && res.id && res.apiKey) {
+        setCreated({ id: res.id, apiKey: res.apiKey });
+      } else {
+        handleClose();
+      }
     } catch (error) {
       console.error("Registry error:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (created) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm font-mono selection:bg-indigo-500/30 transition-colors duration-300">
+        <div className="w-full max-w-lg bg-card border border-border rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="px-6 py-4 border-b border-border bg-muted/5 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={16} className="text-emerald-500" />
+              <span className="text-[11px] font-black text-foreground uppercase tracking-[0.2em]">Project_Registered</span>
+            </div>
+            <button onClick={handleClose} className="text-muted hover:text-foreground transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4 overflow-y-auto">
+            <p className="text-[10px] text-muted uppercase tracking-widest leading-relaxed">
+              Save these now — you&apos;ll need them to configure <span className="text-foreground font-bold">qa-console-playwright-reporter</span> in your test project.
+            </p>
+            <ProjectSetupPanel projectId={created.id} apiKey={created.apiKey} />
+          </div>
+
+          <div className="px-6 py-4 border-t border-border bg-muted/5 flex justify-end shrink-0">
+            <button
+              onClick={handleClose}
+              className="px-8 py-2.5 bg-foreground text-background text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // 1. BACKDROP: Uses background variable with high opacity for focus
@@ -42,7 +88,7 @@ export function RegisterProjectModal({ isOpen, onClose, onSuccess }: any) {
             <Database size={16} className="text-indigo-500" />
             <span className="text-[11px] font-black text-foreground uppercase tracking-[0.2em]">Resource_Registration_Protocol</span>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-foreground transition-colors">
+          <button onClick={handleClose} className="text-muted hover:text-foreground transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -111,9 +157,9 @@ export function RegisterProjectModal({ isOpen, onClose, onSuccess }: any) {
 
           {/* FOOTER ACTIONS */}
           <div className="px-8 py-6 border-t border-border bg-muted/5 flex justify-end items-center gap-6">
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={handleClose}
               className="text-[10px] font-bold text-muted uppercase tracking-widest hover:text-foreground transition-colors"
             >
               Abort_Operation

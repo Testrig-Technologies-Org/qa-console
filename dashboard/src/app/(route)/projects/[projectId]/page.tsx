@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Zap, Book, ChevronRight, Loader2, Command, Server, Box } from "lucide-react";
 import { getProjectById } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import { ProjectSetupPanel } from "../_components/ProjectSetupPanel";
 
 export default function ProjectSelectionPage() {
   const { projectId } = useParams();
@@ -61,6 +62,17 @@ export default function ProjectSelectionPage() {
           badge="Stable"
         />
       </div>
+
+      {/* 2.5 SETUP CREDENTIALS */}
+      {project.apiKey && (
+        <div className="max-w-3xl">
+          <ProjectSetupPanel
+            projectId={project.id}
+            apiKey={project.apiKey}
+            onKeyRegenerated={(newKey) => setProject((p: any) => ({ ...p, apiKey: newKey }))}
+          />
+        </div>
+      )}
 
       {/* 3. SYSTEM METADATA FOOTER */}
       <div className="flex items-center gap-4 pt-4">

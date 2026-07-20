@@ -10,6 +10,8 @@ npm install --save-dev qa-console-playwright-reporter
 
 ## Usage
 
+On the QA Console dashboard, open your project's page — the setup panel there shows the exact `baseUrl`, `apiKey`, and `projectId` for that project (also copyable as a ready-to-paste `.env` block). Each project has its own key, so a leaked key only exposes that one project.
+
 Add it to your `playwright.config.ts`:
 
 ```ts
@@ -22,7 +24,7 @@ export default defineConfig({
       "qa-console-playwright-reporter",
       {
         baseUrl: process.env.QA_CONSOLE_URL!, // e.g. https://qa-console.yourcompany.com
-        apiKey: process.env.QA_CONSOLE_API_KEY!, // must match AUTOMATION_API_KEY on the dashboard
+        apiKey: process.env.QA_CONSOLE_API_KEY!, // from your project's setup panel on the dashboard
         projectId: Number(process.env.QA_CONSOLE_PROJECT_ID),
         environment: process.env.CI ? "ci" : "dev",
       },
@@ -38,8 +40,8 @@ Every test reports twice: once as `RUNNING` when it starts (so the dashboard's l
 | Option        | Required | Description                                                                             |
 | ------------- | -------- | ----------------------------------------------------------------------------------------- |
 | `baseUrl`     | yes      | Base URL of your QA Console deployment.                                                   |
-| `apiKey`      | yes      | API key matching the dashboard's `AUTOMATION_API_KEY`.                                    |
-| `projectId`   | yes      | Numeric project ID from the QA Console dashboard.                                         |
+| `apiKey`      | yes      | This project's API key, from its setup panel on the dashboard.                            |
+| `projectId`   | yes      | Numeric project ID, also shown on the setup panel.                                        |
 | `environment` | no       | Label attached to the build (e.g. `staging`, `production`). Defaults to `"dev"`.           |
 | `sessionId`   | no       | Groups multiple Playwright processes into one build. See "Sharded / parallel CI" below.   |
 

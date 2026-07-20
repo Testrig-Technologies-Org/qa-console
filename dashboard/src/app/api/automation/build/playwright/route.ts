@@ -1,20 +1,12 @@
 // src/app/api/automation/build/route.ts
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
 import { db } from '../../../../../../db';
-import { automationBuilds, projects } from '../../../../../../db/schema';
+import { automationBuilds } from '../../../../../../db/schema';
+import { getProjectIfKeyValid } from '../../../../../lib/automation-auth';
 
 
 export async function POST(req: Request) {
   try {
-    // Verify API key for external calls
-    const apiKey = req.headers.get('x-api-key');
-    const validApiKey = process.env.AUTOMATION_API_KEY;
-
-    if (!apiKey || apiKey !== validApiKey) {
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
-    }
-
     const body = await req.json();
     const { project_id, environment, type } = body;
 
@@ -22,13 +14,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing project_id parameter' }, { status: 400 });
     }
 
-    // Get project to find organizationId
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, Number(project_id)),
-    });
+    // Verify API key belongs to this project
+    const apiKey = req.headers.get('x-api-key');
+    const project = await getProjectIfKeyValid(Number(project_id), apiKey);
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Invalid API key for this project' }, { status: 401 });
     }
 
     // Create the build

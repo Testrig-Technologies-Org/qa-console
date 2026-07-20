@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
-import { automationBuilds, testResults, projects } from '../../../../../db/schema';
+import { testResults } from '../../../../../db/schema';
+import { getBuildIfKeyValid } from '../../../../lib/automation-auth';
 
 const DEBUG_MODE = true;
 
@@ -41,26 +42,22 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
 
 export async function POST(req: Request) {
   try {
-    // 1. API Key Authentication
-    const apiKey = req.headers.get('x-api-key');
-    if (!apiKey || apiKey !== process.env.AUTOMATION_API_KEY) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await req.json();
-    const { build_id, spec_file, test_entry, project_id } = body;
+    const { build_id, spec_file, test_entry } = body;
 
     if (!build_id || !spec_file || !test_entry) {
       return NextResponse.json({ error: 'Missing pipeline data' }, { status: 400 });
     }
 
-    // 2. Fetch Build and Project Context (for OrgID)
-    const build = await db.query.automationBuilds.findFirst({
-      where: eq(automationBuilds.id, Number(build_id)),
-    });
+    // 1. Verify API key belongs to this build's project, and fetch Build/Project Context (for OrgID)
+    const apiKey = req.headers.get('x-api-key');
+    const authResult = await getBuildIfKeyValid(Number(build_id), apiKey);
 
-    if (!build) return NextResponse.json({ error: 'Build Object not found' }, { status: 404 });
+    if (!authResult) {
+      return NextResponse.json({ error: 'Invalid API key or build not found' }, { status: 401 });
+    }
 
+    const { build } = authResult;
     const lockKey = `${build_id}:${spec_file}`;
 
     return await withLock(lockKey, async () => {
@@ -142,6 +139,12 @@ export async function GET(req: Request) {
     const buildId = searchParams.get('build_id');
 
     if (!buildId) return NextResponse.json({ error: 'build_id required' }, { status: 400 });
+
+    const apiKey = req.headers.get('x-api-key');
+    const authResult = await getBuildIfKeyValid(Number(buildId), apiKey);
+    if (!authResult) {
+      return NextResponse.json({ error: 'Invalid API key or build not found' }, { status: 401 });
+    }
 
     const results = await db.query.testResults.findMany({
       where: eq(testResults.buildId, Number(buildId)),

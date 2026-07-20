@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../../db';
 import { testResults } from '../../../../../../db/schema';
+import { getProjectIfKeyValid } from '../../../../../lib/automation-auth';
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,12 @@ export async function POST(req: Request) {
 
     if (!build_id || !spec_file || !video_url || !project_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const apiKey = req.headers.get('x-api-key');
+    const project = await getProjectIfKeyValid(Number(project_id), apiKey);
+    if (!project) {
+      return NextResponse.json({ error: 'Invalid API key for this project' }, { status: 401 });
     }
 
     return await db.transaction(async (tx) => {

@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
-import { automationBuilds, projects } from '../../../../../db/schema';
+import { automationBuilds } from '../../../../../db/schema';
+import { getProjectIfKeyValid } from '../../../../lib/automation-auth';
 
 export async function POST(req: Request) {
   try {
-    const apiKey = req.headers.get('x-api-key');
-    if (!apiKey || apiKey !== process.env.AUTOMATION_API_KEY) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await req.json();
     const { project_id, environment, type, session_id } = body;
 
@@ -17,12 +13,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing project_id' }, { status: 400 });
     }
 
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, Number(project_id)),
-    });
+    const apiKey = req.headers.get('x-api-key');
+    const project = await getProjectIfKeyValid(Number(project_id), apiKey);
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Invalid API key for this project' }, { status: 401 });
     }
     if (session_id) {
       const existingBuild = await db.query.automationBuilds.findFirst({

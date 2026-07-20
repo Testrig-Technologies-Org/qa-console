@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
-import { automationBuilds, testResults } from '../../../../../db/schema';
+import { testResults } from '../../../../../db/schema';
+import { getBuildIfKeyValid, getProjectIfKeyValid } from '../../../../lib/automation-auth';
 
 
 const DEBUG_MODE = true;
@@ -65,15 +66,6 @@ export async function POST(req: Request) {
   const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
   try {
-    // Verify API key
-    const apiKey = req.headers.get('x-api-key');
-    const validApiKey = process.env.AUTOMATION_API_KEY;
-
-    if (!apiKey || apiKey !== validApiKey) {
-      console.error(`❌ [${requestId}] Invalid API key`);
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
-    }
-
     const body = await req.json();
 
     const validation = validatePayload(body);
@@ -86,14 +78,16 @@ export async function POST(req: Request) {
     const testUniqueKey = unique_test_key || getUniqueTestKey(test_entry);
     const isFinal = test_entry?.is_final === true;
 
-    // Get build to find organizationId and projectId
-    const build = await db.query.automationBuilds.findFirst({
-      where: eq(automationBuilds.id, build_id),
-    });
+    // Verify API key belongs to this build's project, and get build to find organizationId/projectId
+    const apiKey = req.headers.get('x-api-key');
+    const authResult = await getBuildIfKeyValid(build_id, apiKey);
 
-    if (!build) {
-      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+    if (!authResult) {
+      console.error(`❌ [${requestId}] Invalid API key or build not found`);
+      return NextResponse.json({ error: 'Invalid API key or build not found' }, { status: 401 });
     }
+
+    const { build } = authResult;
 
     const lockKey = `${build_id}:${spec_file}`;
 
@@ -258,14 +252,6 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    // Verify API key
-    const apiKey = req.headers.get('x-api-key');
-    const validApiKey = process.env.AUTOMATION_API_KEY;
-
-    if (!apiKey || apiKey !== validApiKey) {
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(req.url);
     const build_id_param = searchParams.get('build_id');
     const project_id_param = searchParams.get('project_id');
@@ -274,6 +260,16 @@ export async function GET(req: Request) {
 
     if (!build_id_param && !project_id_param) {
       return NextResponse.json({ error: 'Missing build_id or project_id' }, { status: 400 });
+    }
+
+    // Verify API key belongs to the referenced project (resolved via build_id if project_id isn't given)
+    const apiKey = req.headers.get('x-api-key');
+    const authedProject = project_id_param
+      ? await getProjectIfKeyValid(Number(project_id_param), apiKey)
+      : (await getBuildIfKeyValid(parseInt(build_id_param!, 10), apiKey))?.project;
+
+    if (!authedProject) {
+      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
     // Build query conditions
