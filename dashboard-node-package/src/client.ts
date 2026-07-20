@@ -1,0 +1,72 @@
+import type { QAConsoleReporterOptions } from "./types";
+
+export interface CreateBuildParams {
+  environment: string;
+  sessionId?: string;
+}
+
+export interface CreateBuildResult {
+  buildId: number;
+  projectId: number;
+  organizationId: string;
+}
+
+export interface ReportResultParams {
+  build_id: number;
+  spec_file: string;
+  test_entry: Record<string, unknown>;
+  unique_test_key?: string;
+}
+
+export class QAConsoleClient {
+  private readonly baseUrl: string;
+  private readonly options: QAConsoleReporterOptions;
+
+  constructor(options: QAConsoleReporterOptions) {
+    this.options = options;
+    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+  }
+
+  async createBuild({ environment, sessionId }: CreateBuildParams): Promise<CreateBuildResult> {
+    const data = await this.post("/api/automation/build", {
+      project_id: this.options.projectId,
+      environment,
+      type: "playwright",
+      session_id: sessionId,
+    });
+
+    if (!data.buildId) {
+      throw new Error("QA Console did not return a buildId");
+    }
+
+    return {
+      buildId: Number(data.buildId),
+      projectId: data.projectId,
+      organizationId: data.organizationId,
+    };
+  }
+
+  async reportResult(params: ReportResultParams): Promise<void> {
+    await this.post("/api/automation/result", params);
+  }
+
+  private async post(path: string, body: unknown): Promise<any> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.options.apiKey,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!res.ok) {
+      throw new Error(`QA Console request to ${path} failed (${res.status}): ${data.error ?? text}`);
+    }
+
+    return data;
+  }
+}
