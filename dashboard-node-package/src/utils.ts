@@ -40,3 +40,11 @@ export function summarizeSteps(steps: TestStep[] = []): StepSummary[] {
       status: step.error ? "FAILED" : "PASSED",
     }));
 }
+
+/** Flattens Playwright's stdout/stderr chunk arrays into clean, per-line strings for the dashboard's log terminal. */
+export function normalizeStdio(chunks: Array<string | Buffer> = []): string[] {
+  return chunks
+    .flatMap((chunk) => chunk.toString().split("\n"))
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+}

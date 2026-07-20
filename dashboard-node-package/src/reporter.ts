@@ -1,7 +1,7 @@
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from "@playwright/test/reporter";
 import { QAConsoleClient } from "./client";
 import type { QAConsoleReporterOptions } from "./types";
-import { extractCaseCodes, mapStatus, summarizeSteps, toSpecFile } from "./utils";
+import { extractCaseCodes, mapStatus, normalizeStdio, summarizeSteps, toSpecFile } from "./utils";
 
 export class QAConsoleReporter implements Reporter {
   private readonly client: QAConsoleClient;
@@ -56,6 +56,9 @@ export class QAConsoleReporter implements Reporter {
       duration_ms: result?.duration ?? 0,
       duration_seconds: result ? (result.duration / 1000).toFixed(2) : "0",
       steps: isFinal ? summarizeSteps(result?.steps) : [],
+      logs: isFinal ? normalizeStdio(result?.stdout) : [],
+      stderr_logs: isFinal ? normalizeStdio(result?.stderr) : [],
+      worker_id: result?.parallelIndex ?? 0,
       error: result?.error
         ? {
             message: result.error.message,
