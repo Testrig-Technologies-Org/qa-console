@@ -64,13 +64,16 @@ export async function POST(req: Request) {
     return await withLock(lockKey, async () => {
       return await withDuplicateKeyRetry(() => db.transaction(async (tx) => {
 
-        // 3. Find existing Spec row
-        const existing = await tx.query.testResults.findFirst({
-          where: and(
-            eq(testResults.buildId, Number(build_id)),
-            eq(testResults.specFile, spec_file)
-          ),
-        });
+        // 3. Find existing Spec row — FOR UPDATE locks the row across the whole
+        // read-modify-write so a concurrent write (even from another serverless
+        // instance) blocks here instead of reading stale data and clobbering it.
+        const existingRows = await tx
+          .select()
+          .from(testResults)
+          .where(and(eq(testResults.buildId, Number(build_id)), eq(testResults.specFile, spec_file)))
+          .for('update')
+          .limit(1);
+        const existing = existingRows[0];
 
         let tests: any[] = existing ? [...(existing.tests as any[])] : [];
 

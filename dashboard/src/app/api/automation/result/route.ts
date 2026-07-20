@@ -105,15 +105,18 @@ export async function POST(req: Request) {
       organizationId: build.organizationId,
     });
 
-    return await withLock(lockKey, async () => {
-      return await withDuplicateKeyRetry(() => db.transaction(async (tx) => {
-        // Get existing record
-        const existing = await tx.query.testResults.findFirst({
-          where: and(
-            eq(testResults.buildId, build_id),
-            eq(testResults.specFile, spec_file)
-          ),
-        });
+    return await withLock(lockKey, () => withDuplicateKeyRetry(() => db.transaction(async (tx) => {
+        // SELECT ... FOR UPDATE holds a row lock for the rest of this transaction, so a
+        // second concurrent write (even from a different serverless instance) blocks here
+        // until this one commits, instead of reading a stale snapshot and clobbering it.
+        // withLock above is just a same-instance fast-path to skip the extra round trip.
+        const existingRows = await tx
+          .select()
+          .from(testResults)
+          .where(and(eq(testResults.buildId, build_id), eq(testResults.specFile, spec_file)))
+          .for('update')
+          .limit(1);
+        const existing = existingRows[0];
 
         let tests: any[] = existing ? [...(existing.tests as any[])] : [];
 
@@ -245,8 +248,7 @@ export async function POST(req: Request) {
             failed: stats.failed,
           },
         });
-      }));
-    });
+      })));
   } catch (error: any) {
     console.error(`❌ [${requestId}] Error:`, error);
     return NextResponse.json({ error: error.message || 'Internal server error', requestId }, { status: 500 });
