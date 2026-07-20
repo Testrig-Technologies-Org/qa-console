@@ -33,7 +33,7 @@ export default defineConfig({
 });
 ```
 
-Every test reports twice: once as `RUNNING` when it starts (so the dashboard's live view shows it in progress), and once with the final result (`PASSED` / `FAILED` / `SKIPPED`) when it ends. The final report includes console output (`console.log`/`console.error` from the test) and a step timeline — wrap meaningful actions in `test.step('...', async () => { ... })` to populate it.
+Every test reports twice: once as `RUNNING` when it starts (so the dashboard's live view shows it in progress), and once with the final result (`PASSED` / `FAILED` / `SKIPPED`) when it ends. The final report includes console output (`console.log`/`console.error` from the test) and a step timeline — wrap meaningful actions in `test.step('...', async () => { ... })` to populate it. Once the whole run finishes, the build itself is marked `passed` or `failed` on the dashboard — it no longer stays stuck on `running`.
 
 ## Options
 

@@ -1,6 +1,6 @@
 {
   "name": "qa-console-playwright-reporter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Playwright reporter that streams live test results to a QA Console dashboard as tests run.",
   "license": "MIT",
   "type": "module",

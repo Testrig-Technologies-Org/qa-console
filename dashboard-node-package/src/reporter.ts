@@ -8,6 +8,7 @@ export class QAConsoleReporter implements Reporter {
   private readonly environment: string;
   private buildId: number | null = null;
   private disabled = false;
+  private readonly pending: Promise<void>[] = [];
 
   constructor(options: QAConsoleReporterOptions) {
     if (!options?.baseUrl) throw new Error('[qa-console-reporter] "baseUrl" is required');
@@ -38,9 +39,19 @@ export class QAConsoleReporter implements Reporter {
     this.send(test, result, true);
   }
 
-  onEnd(_result: FullResult): void {
-    if (this.buildId) {
-      console.log(`[qa-console-reporter] Finished reporting build #${this.buildId}`);
+  async onEnd(result: FullResult): Promise<void> {
+    // Wait for every fire-and-forget test report to actually land before marking the
+    // build complete, otherwise the final status can race ahead of in-flight results.
+    await Promise.all(this.pending);
+
+    if (this.disabled || !this.buildId) return;
+
+    const status = result.status === "passed" ? "passed" : "failed";
+    try {
+      await this.client.completeBuild(this.buildId, status);
+      console.log(`[qa-console-reporter] Finished reporting build #${this.buildId} (${status})`);
+    } catch (error) {
+      console.warn(`[qa-console-reporter] Failed to mark build #${this.buildId} complete: ${(error as Error).message}`);
     }
   }
 
@@ -72,7 +83,7 @@ export class QAConsoleReporter implements Reporter {
       is_flaky: isFinal && result?.status === "passed" && retryCount > 0,
     };
 
-    void this.client
+    const promise = this.client
       .reportResult({
         build_id: this.buildId,
         spec_file: toSpecFile(test.location.file),
@@ -81,5 +92,6 @@ export class QAConsoleReporter implements Reporter {
       .catch((error: Error) => {
         console.warn(`[qa-console-reporter] Failed to report "${test.title}": ${error.message}`);
       });
+    this.pending.push(promise);
   }
 }

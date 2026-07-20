@@ -50,9 +50,17 @@ export class QAConsoleClient {
     await this.post("/api/automation/result", params);
   }
 
-  private async post(path: string, body: unknown): Promise<any> {
+  async completeBuild(buildId: number, status: "passed" | "failed"): Promise<void> {
+    await this.request("/api/automation/build", "PATCH", { build_id: buildId, status });
+  }
+
+  private post(path: string, body: unknown): Promise<any> {
+    return this.request(path, "POST", body);
+  }
+
+  private async request(path: string, method: string, body: unknown): Promise<any> {
     const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
         "x-api-key": this.options.apiKey,
