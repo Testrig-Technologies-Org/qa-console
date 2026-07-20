@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
 import { testResults } from '../../../../../db/schema';
 import { getBuildIfKeyValid } from '../../../../lib/automation-auth';
+import { withDuplicateKeyRetry } from '../../../../lib/automation-concurrency';
 
 const DEBUG_MODE = true;
 
@@ -61,8 +62,8 @@ export async function POST(req: Request) {
     const lockKey = `${build_id}:${spec_file}`;
 
     return await withLock(lockKey, async () => {
-      return await db.transaction(async (tx) => {
-        
+      return await withDuplicateKeyRetry(() => db.transaction(async (tx) => {
+
         // 3. Find existing Spec row
         const existing = await tx.query.testResults.findFirst({
           where: and(
@@ -117,12 +118,12 @@ export async function POST(req: Request) {
           });
         }
 
-        return NextResponse.json({ 
-          success: true, 
+        return NextResponse.json({
+          success: true,
           spec: spec_file,
-          test_count: tests.length 
+          test_count: tests.length
         });
-      });
+      }));
     });
 
   } catch (error: any) {

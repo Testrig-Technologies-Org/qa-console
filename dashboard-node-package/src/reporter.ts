@@ -9,6 +9,11 @@ export class QAConsoleReporter implements Reporter {
   private buildId: number | null = null;
   private disabled = false;
   private readonly pending: Promise<void>[] = [];
+  // Resolves once onBegin's build creation has settled (success or failure). Tests can
+  // start and finish before that async call returns, so every report waits on this
+  // first instead of racing buildId — otherwise fast tests silently get dropped.
+  private readonly buildReady: Promise<void>;
+  private resolveBuildReady!: () => void;
 
   constructor(options: QAConsoleReporterOptions) {
     if (!options?.baseUrl) throw new Error('[qa-console-reporter] "baseUrl" is required');
@@ -17,6 +22,9 @@ export class QAConsoleReporter implements Reporter {
 
     this.environment = options.environment ?? "dev";
     this.client = new QAConsoleClient(options);
+    this.buildReady = new Promise((resolve) => {
+      this.resolveBuildReady = resolve;
+    });
   }
 
   async onBegin(_config: FullConfig, _suite: Suite): Promise<void> {
@@ -28,6 +36,8 @@ export class QAConsoleReporter implements Reporter {
     } catch (error) {
       this.disabled = true;
       console.warn(`[qa-console-reporter] Disabled for this run — could not create build: ${(error as Error).message}`);
+    } finally {
+      this.resolveBuildReady();
     }
   }
 
@@ -56,6 +66,11 @@ export class QAConsoleReporter implements Reporter {
   }
 
   private send(test: TestCase, result: TestResult | undefined, isFinal: boolean): void {
+    const promise = this.buildReady.then(() => this.sendNow(test, result, isFinal));
+    this.pending.push(promise);
+  }
+
+  private sendNow(test: TestCase, result: TestResult | undefined, isFinal: boolean): Promise<void> | void {
     if (this.disabled || !this.buildId) return;
 
     const retryCount = result?.retry ?? 0;
@@ -83,7 +98,7 @@ export class QAConsoleReporter implements Reporter {
       is_flaky: isFinal && result?.status === "passed" && retryCount > 0,
     };
 
-    const promise = this.client
+    return this.client
       .reportResult({
         build_id: this.buildId,
         spec_file: toSpecFile(test.location.file),
@@ -92,6 +107,5 @@ export class QAConsoleReporter implements Reporter {
       .catch((error: Error) => {
         console.warn(`[qa-console-reporter] Failed to report "${test.title}": ${error.message}`);
       });
-    this.pending.push(promise);
   }
 }

@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
 import { testResults } from '../../../../../db/schema';
 import { getBuildIfKeyValid, getProjectIfKeyValid } from '../../../../lib/automation-auth';
+import { withDuplicateKeyRetry } from '../../../../lib/automation-concurrency';
 
 
 const DEBUG_MODE = true;
@@ -38,6 +39,9 @@ const getUniqueTestKey = (test_entry: any): string => {
 };
 
 /* -------------------- MUTEX LOCK -------------------- */
+// Only serializes requests within a single warm instance — on serverless platforms,
+// concurrent requests can land on separate instances with their own empty lock map,
+// so this alone cannot prevent the race below. Kept as a cheap fast-path.
 
 const locks = new Map<string, Promise<void>>();
 
@@ -59,6 +63,7 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
     resolve!();
   }
 }
+
 
 /* -------------------- POST HANDLER -------------------- */
 
@@ -101,7 +106,7 @@ export async function POST(req: Request) {
     });
 
     return await withLock(lockKey, async () => {
-      return await db.transaction(async (tx) => {
+      return await withDuplicateKeyRetry(() => db.transaction(async (tx) => {
         // Get existing record
         const existing = await tx.query.testResults.findFirst({
           where: and(
@@ -240,7 +245,7 @@ export async function POST(req: Request) {
             failed: stats.failed,
           },
         });
-      });
+      }));
     });
   } catch (error: any) {
     console.error(`❌ [${requestId}] Error:`, error);
