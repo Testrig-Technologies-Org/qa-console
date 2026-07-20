@@ -54,6 +54,26 @@ export class QAConsoleClient {
     await this.request("/api/automation/build", "PATCH", { build_id: buildId, status });
   }
 
+  async uploadFile(fileBuffer: Buffer, fileName: string, contentType: string): Promise<string> {
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(fileBuffer)], { type: contentType }), fileName);
+
+    const res = await fetch(`${this.baseUrl}/api/automation/upload?project_id=${this.options.projectId}`, {
+      method: "POST",
+      headers: { "x-api-key": this.options.apiKey },
+      body: form,
+    });
+
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!res.ok || !data.videoUrl) {
+      throw new Error(`QA Console upload failed (${res.status}): ${data.error ?? text}`);
+    }
+
+    return data.videoUrl as string;
+  }
+
   private post(path: string, body: unknown): Promise<any> {
     return this.request(path, "POST", body);
   }

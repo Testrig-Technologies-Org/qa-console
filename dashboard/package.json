@@ -1,12 +1,12 @@
 {
-  "name"   : "frontend",
+  "name": "frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev"  : "next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint" : "eslint"
+    "lint": "eslint"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.10",
@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.89.0",
     "@tidbcloud/serverless": "^0.2.0",
     "axios": "^1.13.2",
+    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",

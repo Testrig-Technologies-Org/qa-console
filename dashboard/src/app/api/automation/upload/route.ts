@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
+import { Readable } from 'node:stream';
+import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
+import { getProjectIfKeyValid } from '../../../../lib/automation-auth';
+
+// Reads CLOUDINARY_URL from the environment automatically.
+cloudinary.config({ secure: true });
 
 export async function POST(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get('project_id');
+
+    if (!projectId) {
+      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 });
+    }
+
+    const apiKey = req.headers.get('x-api-key');
+    const project = await getProjectIfKeyValid(Number(projectId), apiKey);
+
+    if (!project) {
+      return NextResponse.json({ error: 'Invalid API key for this project' }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
@@ -9,34 +29,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Catbox requires:
-    // 1. reqtype: 'fileupload'
-    // 2. userhash: (optional)
-    // 3. fileToUpload: (the actual file)
-    const catForm = new FormData();
-    catForm.append('reqtype', 'fileupload');
-    catForm.append('fileToUpload', file);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    const response = await fetch('https://catbox.moe/user/api.php', {
-      method: 'POST',
-      body: catForm,
-      // IMPORTANT: In Next.js/Node, do NOT manually set the Content-Type header
-      // when sending FormData; fetch will automatically add the 'boundary' string.
+    // type: 'authenticated' means the asset can't be fetched without a valid signature —
+    // not a publicly guessable URL like the previous Catbox-hosted links.
+    const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'video',
+          type: 'authenticated',
+          folder: `qa-console/${projectId}`,
+        },
+        (error, result) => {
+          if (error || !result) return reject(error ?? new Error('Cloudinary upload failed'));
+          resolve(result);
+        },
+      );
+      Readable.from(buffer).pipe(uploadStream);
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Catbox Error: ${errorText}`);
-    }
+    const videoUrl = cloudinary.url(uploadResult.public_id, {
+      resource_type: 'video',
+      type: 'authenticated',
+      format: uploadResult.format,
+      sign_url: true,
+      secure: true,
+    });
 
-    const videoUrl = await response.text(); // Catbox returns the URL as plain text
-
-    // Check if Catbox returned an error string instead of a URL
-    if (videoUrl.startsWith('Filters') || videoUrl.includes('error')) {
-      return NextResponse.json({ error: videoUrl }, { status: 400 });
-    }
-
-    return NextResponse.json({ videoUrl: videoUrl.trim() });
+    return NextResponse.json({ videoUrl });
   } catch (error: any) {
     console.error("Upload Route Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });

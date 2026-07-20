@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from "@playwright/test/reporter";
 import { QAConsoleClient } from "./client";
 import type { QAConsoleReporterOptions } from "./types";
@@ -70,8 +71,10 @@ export class QAConsoleReporter implements Reporter {
     this.pending.push(promise);
   }
 
-  private sendNow(test: TestCase, result: TestResult | undefined, isFinal: boolean): Promise<void> | void {
+  private async sendNow(test: TestCase, result: TestResult | undefined, isFinal: boolean): Promise<void> {
     if (this.disabled || !this.buildId) return;
+
+    const videoUrl = isFinal ? await this.uploadVideo(test, result) : undefined;
 
     const retryCount = result?.retry ?? 0;
     const testEntry = {
@@ -85,6 +88,7 @@ export class QAConsoleReporter implements Reporter {
       logs: isFinal ? normalizeStdio(result?.stdout) : [],
       stderr_logs: isFinal ? normalizeStdio(result?.stderr) : [],
       worker_id: result?.parallelIndex ?? 0,
+      attachments: videoUrl ? { paths: { video: videoUrl } } : undefined,
       error: result?.error
         ? {
             message: result.error.message,
@@ -98,7 +102,7 @@ export class QAConsoleReporter implements Reporter {
       is_flaky: isFinal && result?.status === "passed" && retryCount > 0,
     };
 
-    return this.client
+    await this.client
       .reportResult({
         build_id: this.buildId,
         spec_file: toSpecFile(test.location.file),
@@ -107,5 +111,18 @@ export class QAConsoleReporter implements Reporter {
       .catch((error: Error) => {
         console.warn(`[qa-console-reporter] Failed to report "${test.title}": ${error.message}`);
       });
+  }
+
+  private async uploadVideo(test: TestCase, result: TestResult | undefined): Promise<string | undefined> {
+    const video = result?.attachments.find((a) => a.name === "video" && a.path);
+    if (!video?.path) return undefined;
+
+    try {
+      const buffer = await readFile(video.path);
+      return await this.client.uploadFile(buffer, `${test.id}.webm`, video.contentType || "video/webm");
+    } catch (error) {
+      console.warn(`[qa-console-reporter] Failed to upload video for "${test.title}": ${(error as Error).message}`);
+      return undefined;
+    }
   }
 }
