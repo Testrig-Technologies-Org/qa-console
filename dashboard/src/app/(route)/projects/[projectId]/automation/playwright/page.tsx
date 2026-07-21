@@ -174,6 +174,28 @@ function PlaywrightDashboardContent() {
   const normalizedTests = useMemo(() => normalizePlaywrightResults(buildDetails?.results || []), [buildDetails]);
 
   const uiIdFor = (t: any) => t.unique_key || `${t.id}-${t.project}-${t.title}`;
+  const workerIdFor = (t: any) => t.worker_id ?? t.test_entry?.worker_id ?? 0;
+
+  // A worker only ever has one live-frame slot. If its previous test got orphaned (worker moved
+  // on without ever finalizing it — the same crash pattern seen elsewhere: a worker dies/restarts
+  // mid-test, leaving that entry stuck RUNNING), multiple RUNNING rows can end up sharing the same
+  // worker_id — and all of them would read that worker's *current* frame, which really belongs to
+  // whichever one started most recently. Older entries on the same worker are provably orphaned
+  // (a newer test could only start on that worker if it moved on), regardless of whether they've
+  // crossed the generic timeout threshold yet — a stronger signal than isTestStale alone.
+  const currentOccupantByWorker = useMemo(() => {
+    const map: Record<number, { key: string; startedAt: number }> = {};
+    normalizedTests.forEach((t: any) => {
+      if (t.status !== 'running' || !t.created_at) return;
+      const workerId = workerIdFor(t);
+      const startedAt = new Date(t.created_at).getTime();
+      const existing = map[workerId];
+      if (!existing || startedAt > existing.startedAt) {
+        map[workerId] = { key: uiIdFor(t), startedAt };
+      }
+    });
+    return map;
+  }, [normalizedTests]);
 
   // Live steps/logs: while a row is expanded AND its test is still RUNNING, keep re-fetching its
   // steps/logs so new ones appear as the test progresses, instead of only ever showing whatever
@@ -401,7 +423,7 @@ function PlaywrightDashboardContent() {
                       const uiId = uiIdFor(t);
                       return (
                         <div key={uiId} className="relative group hover:bg-muted/5 transition-colors">
-                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' ? liveFrames[t.worker_id ?? t.test_entry?.worker_id ?? 0] : null} />
+                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key === uiId ? liveFrames[workerIdFor(t)] : null} isSuperseded={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key !== uiId} />
                         </div>
                       );
                     })}

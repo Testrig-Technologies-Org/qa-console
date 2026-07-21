@@ -130,12 +130,15 @@ function StepItem({ step, depth }: { step: any; depth: number }) {
   );
 }
 
-export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }: any) {
+export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame, isSuperseded }: any) {
   const [stepsExpanded, setStepsExpanded] = React.useState(false);
 
   const videoUrl = getVideoUrl(test);
   const screenshotUrl = getScreenshotUrl(test);
-  const stale = isTestStale(test);
+  // Superseded is a stronger signal than the generic timeout: a newer test could only have
+  // started on this same worker if this one's worker already moved on, so it's provably
+  // orphaned regardless of how long it's actually been RUNNING for.
+  const stale = isTestStale(test) || !!isSuperseded;
   const steps = getSteps(test);
   const error = getError(test);
   const hasLogs = checkHasLogs(test);
