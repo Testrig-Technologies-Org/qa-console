@@ -88,6 +88,11 @@ export class QAConsoleReporter implements Reporter {
       logs: isFinal ? normalizeStdio(result?.stdout) : [],
       stderr_logs: isFinal ? normalizeStdio(result?.stderr) : [],
       worker_id: result?.parallelIndex ?? 0,
+      // The dashboard uses this to tell a genuinely long-running test apart from one whose
+      // worker crashed without reporting a final result — Playwright already knows the right
+      // answer per-test (accounts for testConfig.timeout, testProject.timeout, test.setTimeout,
+      // test.slow, etc.), so there's no reason to guess a blanket threshold dashboard-side.
+      timeout_ms: test.timeout,
       attachments: videoUrl ? { paths: { video: videoUrl } } : undefined,
       error: result?.error
         ? {

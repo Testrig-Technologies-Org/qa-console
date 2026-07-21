@@ -155,6 +155,11 @@ export async function POST(req: Request) {
             is_final: false,
             logs: [],
             steps: [],
+            // Forwarded from the RUNNING report so it survives even if this test never reaches
+            // the update branch below (e.g. its worker crashes) — that's exactly the case the
+            // dashboard needs this for, to tell a genuinely long-running test apart from a
+            // stuck one using its own configured timeout instead of a guessed threshold.
+            timeout_ms: test_entry.timeout_ms,
             created_at: new Date().toISOString(),
           });
           testIdx = tests.length - 1;

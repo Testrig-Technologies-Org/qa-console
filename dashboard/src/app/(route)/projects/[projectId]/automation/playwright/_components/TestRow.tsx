@@ -30,16 +30,26 @@ const getVideoUrl = (test: any): string | null => {
   return test?.video_url || test?.attachments?.paths?.video || test?.test_entry?.attachments?.paths?.video || null;
 };
 
-// A single test entry stuck at RUNNING this long has almost certainly been orphaned (its
-// worker process died before it could report a final result) rather than genuinely still
-// executing — no real test takes 45+ minutes. `created_at` is set server-side the moment a
-// test's RUNNING report first lands (see /api/automation/result), so it survives even though
-// the entry itself never gets a follow-up update.
-const TEST_STALE_MS = 45 * 60 * 1000;
+// Fallback only for entries reported before the reporter started sending timeout_ms, or if it's
+// ever missing for some other reason — otherwise staleness is based on the test's own configured
+// timeout (see below), not a guess, so genuinely long-running tests are never misflagged.
+const FALLBACK_TEST_TIMEOUT_MS = 30 * 60 * 1000;
+// Grace period on top of the test's own timeout, for reporting/network lag between Playwright
+// itself timing the test out and that final result actually reaching the dashboard.
+const STALE_GRACE_MS = 10 * 60 * 1000;
 
+// A test entry stuck at RUNNING well past its own configured timeout has almost certainly been
+// orphaned (its worker process died before it could report a final result) rather than
+// genuinely still executing — Playwright itself would have killed it by now otherwise.
+// `created_at`/`timeout_ms` are set server-side the moment a test's RUNNING report first lands
+// (see /api/automation/result), so they survive even though the entry itself never gets a
+// follow-up update.
 const isTestStale = (test: any): boolean => {
   if (test?.status !== 'running' || !test?.created_at) return false;
-  return Date.now() - new Date(test.created_at).getTime() > TEST_STALE_MS;
+  const effectiveTimeout = typeof test?.timeout_ms === 'number' && test.timeout_ms > 0
+    ? test.timeout_ms
+    : FALLBACK_TEST_TIMEOUT_MS;
+  return Date.now() - new Date(test.created_at).getTime() > effectiveTimeout + STALE_GRACE_MS;
 };
 
 const getScreenshotUrl = (test: any): string | null => {
