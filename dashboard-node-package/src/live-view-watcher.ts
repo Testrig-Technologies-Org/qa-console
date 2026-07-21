@@ -117,22 +117,26 @@ function captureFrame(wsUrl: string): Promise<string | null> {
   });
 }
 
+/** One worker's outcome for a single poll tick. */
+interface WorkerFrame {
+  workerIndex: number;
+  frame: string | null;
+}
+
 /**
- * Finds whichever worker currently has an active page, across all `workerCount` ports, and
- * grabs one frame from it. With several workers simultaneously busy, this surfaces one of them
- * (rotating the starting point each tick so it's not always the same worker) rather than trying
- * to show all of them at once — the dashboard stores/displays one live frame per build, a bigger
- * change than this feature needs right now.
+ * Captures a frame from every worker that currently has an active page, in parallel — a build
+ * can have several tests genuinely running at once (one per worker), each needing its own frame,
+ * not one shared for the whole build (the dashboard now stores/displays a frame per worker).
  */
-async function captureAnyActiveFrame(basePort: number, workerCount: number, rotate: number): Promise<string | null> {
-  for (let i = 0; i < workerCount; i++) {
-    const port = basePort + ((i + rotate) % workerCount);
-    const target = await findPageTarget(port);
-    if (!target?.webSocketDebuggerUrl) continue;
-    const frame = await captureFrame(target.webSocketDebuggerUrl);
-    if (frame) return frame;
-  }
-  return null;
+async function captureFrameFromEachWorker(basePort: number, workerCount: number): Promise<WorkerFrame[]> {
+  return Promise.all(
+    Array.from({ length: workerCount }, async (_, workerIndex): Promise<WorkerFrame> => {
+      const target = await findPageTarget(basePort + workerIndex);
+      if (!target?.webSocketDebuggerUrl) return { workerIndex, frame: null };
+      const frame = await captureFrame(target.webSocketDebuggerUrl);
+      return { workerIndex, frame };
+    }),
+  );
 }
 
 /**
@@ -156,8 +160,38 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   let loggedNoTargetYet = false;
   let loggedPostFailure = false;
   let loggedSkipped = false;
-  let rotate = 0;
   const startedAt = Date.now();
+
+  const postFrame = (workerIndex: number, frame: string) =>
+    liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, workerId: workerIndex, frameBase64: frame }).then(
+      ({ skipped }) => {
+        if (skipped) {
+          // The route responds 200 here (not an error) whenever it can't find a matching
+          // RUNNING build for this project right now — most likely several builds are RUNNING
+          // simultaneously for this project (no session_id to tell them apart, so it guessed the
+          // most recent one) and it isn't the one actually executing, or the build already
+          // finished. Frames are being sent but silently going nowhere useful either way — this
+          // would otherwise look identical to genuine success.
+          if (!loggedSkipped) {
+            loggedSkipped = true;
+            console.warn(
+              "[qa-console-live-view] Dashboard has no matching RUNNING build for this project right now — frames are being posted but dropped server-side. If multiple builds can run concurrently for this project, set QA_CONSOLE_SESSION_ID so the dashboard can tell them apart.",
+            );
+          }
+          return;
+        }
+        if (!firstFramePosted) {
+          firstFramePosted = true;
+          console.log("[qa-console-live-view] First live frame posted successfully.");
+        }
+      },
+      (error) => {
+        if (!loggedPostFailure) {
+          loggedPostFailure = true;
+          console.warn(`[qa-console-live-view] Failed to post live frame: ${(error as Error).message}`);
+        }
+      },
+    );
 
   const loop = (async () => {
     while (!stopped) {
@@ -165,8 +199,10 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
       if (stopped) break;
 
       try {
-        const frame = await captureAnyActiveFrame(basePort, workerCount, rotate++);
-        if (!frame) {
+        const results = await captureFrameFromEachWorker(basePort, workerCount);
+        const found = results.filter((r) => r.frame);
+
+        if (found.length === 0) {
           // Only worth flagging if we've had a while and never found anything — a normal gap
           // between tests, or the first second or two before browsers launch, is expected.
           if (!firstFramePosted && !loggedNoTargetYet && Date.now() - startedAt > 30_000) {
@@ -178,35 +214,7 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
           continue;
         }
 
-        await liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, frameBase64: frame }).then(
-          ({ skipped }) => {
-            if (skipped) {
-              // The route responds 200 here (not an error) whenever it can't find a matching
-              // RUNNING build for this project right now — most likely several builds are
-              // RUNNING simultaneously for this project (no session_id to tell them apart, so
-              // it guessed the most recent one) and it isn't the one actually executing, or the
-              // build already finished. Frames are being sent but silently going nowhere useful
-              // either way — this would otherwise look identical to genuine success.
-              if (!loggedSkipped) {
-                loggedSkipped = true;
-                console.warn(
-                  "[qa-console-live-view] Dashboard has no matching RUNNING build for this project right now — frames are being posted but dropped server-side. If multiple builds can run concurrently for this project, set QA_CONSOLE_SESSION_ID so the dashboard can tell them apart.",
-                );
-              }
-              return;
-            }
-            if (!firstFramePosted) {
-              firstFramePosted = true;
-              console.log("[qa-console-live-view] First live frame posted successfully.");
-            }
-          },
-          (error) => {
-            if (!loggedPostFailure) {
-              loggedPostFailure = true;
-              console.warn(`[qa-console-live-view] Failed to post live frame: ${(error as Error).message}`);
-            }
-          },
-        );
+        await Promise.all(found.map((r) => postFrame(r.workerIndex, r.frame as string)));
       } catch {
         // A bad tick should never kill the watcher loop.
       }

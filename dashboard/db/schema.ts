@@ -1,4 +1,4 @@
-import { mysqlTable, text, mediumtext, timestamp, int, json, varchar, uniqueIndex, index } from 'drizzle-orm/mysql-core';
+import { mysqlTable, text, mediumtext, timestamp, int, json, varchar, uniqueIndex, index, primaryKey } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
@@ -126,16 +126,21 @@ export const testResults = mysqlTable('test_results', {
   orgIdx: index('result_org_idx').on(table.organizationId),
 }));
 
-// 8. AUTOMATION LIVE FRAMES (transient — one row per build, overwritten every frame while its
-// single currently-running test streams (the CI watcher only runs with `workers: 1`, so there's
-// never more than one live test per build), deleted once that test finishes; not part of
+// 8. AUTOMATION LIVE FRAMES (transient — one row per (build, worker), overwritten every frame
+// while that worker's current test streams, deleted once the whole run finishes; not part of
 // testResults.tests since that column goes through a lock+transaction path built for rare status
-// transitions, not high-frequency "latest wins" frame writes)
+// transitions, not high-frequency "latest wins" frame writes). Keyed by workerId (matching
+// Playwright's own parallelIndex/TEST_PARALLEL_INDEX, which the reporter already sends as
+// worker_id on every test entry) rather than just buildId — a build can have several tests
+// genuinely running at once, each needing its own frame slot, not one shared for the whole build.
 export const automationLiveFrames = mysqlTable('automation_live_frames', {
-  buildId: int('build_id').primaryKey().references(() => automationBuilds.id, { onDelete: 'cascade' }),
+  buildId: int('build_id').notNull().references(() => automationBuilds.id, { onDelete: 'cascade' }),
+  workerId: int('worker_id').notNull().default(0),
   frameData: mediumtext('frame_data').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  pk: primaryKey({ columns: [table.buildId, table.workerId] }),
+}));
 
 /* -------------------- RELATIONS -------------------- */
 

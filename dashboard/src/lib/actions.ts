@@ -569,19 +569,25 @@ export async function getTestSteps(specId: number, testTitle: string) {
  * watcher only runs with `workers: 1`, so there's never more than one live test at a time) —
  * the dashboard attaches it to whichever test row currently shows status RUNNING.
  */
-export async function getLiveFrame(buildId: number) {
+/**
+ * Polled every ~50ms by the dashboard while a build is RUNNING. One row per (build, worker) —
+ * a build can have several tests genuinely running at once, each needing its own frame, not one
+ * shared across the whole build. The dashboard matches each RUNNING test row to its frame via
+ * worker_id (already present on every testResults entry — Playwright's own parallelIndex).
+ */
+export async function getLiveFrames(buildId: number): Promise<Record<number, string>> {
   try {
     const { userId } = await auth();
-    if (!userId) return null;
+    if (!userId) return {};
 
-    const frame = await db.query.automationLiveFrames.findFirst({
+    const frames = await db.query.automationLiveFrames.findMany({
       where: eq(automationLiveFrames.buildId, buildId),
     });
 
-    return frame ? { frame_base64: frame.frameData, updated_at: frame.updatedAt } : null;
+    return Object.fromEntries(frames.map((f) => [f.workerId, f.frameData]));
   } catch (error) {
-    console.error('Error fetching live frame:', error);
-    return null;
+    console.error('Error fetching live frames:', error);
+    return {};
   }
 }
 

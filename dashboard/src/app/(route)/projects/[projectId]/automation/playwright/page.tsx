@@ -8,7 +8,7 @@ import {
   getBuildDetails,
   getPlaywrightTrend,
   getTestSteps,
-  getLiveFrame,
+  getLiveFrames,
   getProjectById
 } from "@/lib/actions";
 import {
@@ -173,20 +173,22 @@ function PlaywrightDashboardContent() {
 
   const normalizedTests = useMemo(() => normalizePlaywrightResults(buildDetails?.results || []), [buildDetails]);
 
-  // Live view: the CI watcher only runs with `workers: 1`, so a build has at most one RUNNING
-  // test at a time — one poll per build is enough, no per-test targeting needed. Kept as
-  // separate state (not merged into buildDetails) since it updates far more often than results.
-  const [liveFrame, setLiveFrame] = useState<string | null>(null);
+  // Live view: a build can have several tests genuinely running at once (one per worker), each
+  // needing its own frame — keyed by worker_id (Playwright's own parallelIndex, already present
+  // on every test entry) so each RUNNING row gets its own live view instead of all of them
+  // showing whichever one frame happened to be fetched. Kept as separate state (not merged into
+  // buildDetails) since it updates far more often than results.
+  const [liveFrames, setLiveFrames] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!selectedBuildId || buildDetails?.status !== 'running') {
-      setLiveFrame(null);
+      setLiveFrames({});
       return;
     }
     let cancelled = false;
     const poll = async () => {
-      const data = await getLiveFrame(selectedBuildId);
-      if (!cancelled && data?.frame_base64) setLiveFrame(data.frame_base64);
+      const data = await getLiveFrames(selectedBuildId);
+      if (!cancelled) setLiveFrames(data);
     };
     poll();
     const interval = setInterval(poll, 50);
@@ -355,7 +357,7 @@ function PlaywrightDashboardContent() {
                       const uiId = t.unique_key || `${t.id}-${t.project}-${t.title}`;
                       return (
                         <div key={uiId} className="relative group hover:bg-muted/5 transition-colors">
-                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' ? liveFrame : null} />
+                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' ? liveFrames[t.worker_id ?? t.test_entry?.worker_id ?? 0] : null} />
                         </div>
                       );
                     })}

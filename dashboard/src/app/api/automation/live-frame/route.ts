@@ -26,7 +26,7 @@ async function resolveRunningBuild(projectId: number, sessionId?: string | null)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { project_id, session_id, frame_base64 } = body;
+    const { project_id, session_id, worker_id, frame_base64 } = body;
 
     if (!project_id || !frame_base64) {
       return NextResponse.json({ error: 'Missing project_id or frame_base64' }, { status: 400 });
@@ -46,10 +46,13 @@ export async function POST(req: Request) {
     }
 
     // Plain upsert, no lock: unlike testResults writes, an overwritten mid-flight frame is the
-    // desired behavior here, not a lost update.
+    // desired behavior here, not a lost update. Keyed by (buildId, workerId): a build can have
+    // several tests genuinely running at once, each needing its own frame slot — matches
+    // worker_id already sent on every testResults entry (Playwright's parallelIndex), so the
+    // dashboard can join a RUNNING test row to the right frame.
     await db
       .insert(automationLiveFrames)
-      .values({ buildId: build.id, frameData: frame_base64 })
+      .values({ buildId: build.id, workerId: Number(worker_id) || 0, frameData: frame_base64 })
       .onDuplicateKeyUpdate({ set: { frameData: frame_base64 } });
 
     return NextResponse.json({ success: true, buildId: build.id });
@@ -79,6 +82,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: true, skipped: true });
     }
 
+    // No workerId filter — the watcher's teardown fires once for the whole run, so this clears
+    // every worker's frame for the build, not just one.
     await db.delete(automationLiveFrames).where(eq(automationLiveFrames.buildId, build.id));
 
     return NextResponse.json({ success: true });
