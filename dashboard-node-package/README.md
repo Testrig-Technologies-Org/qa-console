@@ -70,7 +70,10 @@ import { liveViewLaunchOptions } from "qa-console-playwright-reporter/live-view-
 
 export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
-  globalSetup: process.env.CI ? require.resolve("qa-console-playwright-reporter/live-view-watcher") : undefined,
+  // A bare string, same as reporter names — Playwright resolves it internally. Don't wrap this
+  // in require.resolve(): that breaks with "require is not defined in ES module scope" in any
+  // project whose playwright.config.ts is loaded as ESM (e.g. uses import.meta.url).
+  globalSetup: process.env.CI ? "qa-console-playwright-reporter/live-view-watcher" : undefined,
   use: {
     // Opens Chrome's own debugging port; the watcher polls it for screenshots. Defaults to
     // enabled only under CI (matching `workers` above) and port 9223 — pass { port, enabled }

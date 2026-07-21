@@ -51,7 +51,11 @@ export default defineConfig({
    * `workers: 1` (already the case on CI, above); no-ops otherwise. Same opt-in condition as
    * the reporter.
    */
-  globalSetup: qaConsoleConfigured ? require.resolve('qa-console-playwright-reporter/live-view-watcher') : undefined,
+  // Playwright resolves this string itself (same as the bare 'qa-console-playwright-reporter'
+  // reporter name above) — no require.resolve() needed, and require.resolve() actively breaks
+  // in ESM-mode projects ("require is not defined in ES module scope") since it depends on the
+  // CJS `require` global existing, which isn't true just because this file happens to be CJS.
+  globalSetup: qaConsoleConfigured ? 'qa-console-playwright-reporter/live-view-watcher' : undefined,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
