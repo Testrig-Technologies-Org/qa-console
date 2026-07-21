@@ -127,10 +127,11 @@ export async function getProjectBuildHistory(projectId: number) {
         eq(automationBuilds.organizationId, orgId)
       )
     )
-    .orderBy(desc(automationBuilds.createdAt));
+    .orderBy(desc(automationBuilds.createdAt))
+    .limit(30);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       builds,
       projectName: projectCheck.name 
     };
@@ -284,10 +285,14 @@ export async function getBuildDetails(buildId: number) {
       triggeredBy: triggeredBy,
       results: results.map((r) => ({
         ...r,
+        // steps (the execution timeline) is dropped here — it's only ever rendered once a row is
+        // both expanded and its timeline toggled open, so shipping it for every test on every
+        // poll (this fetch repeats every 5s while a build is running) is pure dead weight for a
+        // build with many tests. Refetched on demand via getTestSteps when a row expands.
         tests: Array.isArray(r.tests)
-          ? (r.tests as any[]).map((t) => ({
+          ? (r.tests as any[]).map(({ steps, ...t }) => ({
               ...t,
-              has_details: !!(t.steps?.length || t.logs?.length || t.error),
+              has_details: !!(steps?.length || t.logs?.length || t.error),
             }))
           : [],
       })),
@@ -1029,6 +1034,19 @@ export async function getBuildsByProjectAndType(projectId: number, type: string)
 
 
 export async function getTestCasesByProject(projectId: number) {
+  const { userId } = await auth();
+  if (!userId) return [];
+
+  const membership = await db.query.organizationMembers.findFirst({
+    where: eq(organizationMembers.userId, userId),
+  });
+  if (!membership) return [];
+
+  const project = await db.query.projects.findFirst({
+    where: and(eq(projects.id, projectId), eq(projects.organizationId, membership.organizationId)),
+  });
+  if (!project) return [];
+
   return await db.select()
     .from(testCases)
     .where(eq(testCases.projectId, projectId))

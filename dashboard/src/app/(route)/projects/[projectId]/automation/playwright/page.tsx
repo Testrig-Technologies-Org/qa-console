@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  getBuildHistory,
-  getMasterTestCases,
+  getProjectBuildHistory,
+  getTestCasesByProject,
   getBuildDetails,
   getPlaywrightTrend,
   getTestSteps,
@@ -102,17 +102,19 @@ function PlaywrightDashboardContent() {
     return acc;
   }, {}), [masterCases]);
 
+  // Builds/trend genuinely change over time and are worth the 15s poll below. Master test cases
+  // and project info are effectively static for the life of a session — fetched once on mount
+  // instead (see the separate effect further down), not re-fetched on every poll tick.
   const loadData = useCallback(async (initial = false) => {
     if (!projectId) return;
     try {
       if (initial) setLoading(true);
-      const [history, master, trend, projInfo] = await Promise.all([
-        getBuildHistory(), getMasterTestCases(), getPlaywrightTrend(Number(projectId)), getProjectById(Number(projectId))
+      const [history, trend] = await Promise.all([
+        getProjectBuildHistory(Number(projectId)), getPlaywrightTrend(Number(projectId))
       ]);
-      const pwBuilds = Array.isArray(history) ? history.filter((b: any) => b.type?.toLowerCase() === 'playwright') : [];
+      const allBuilds = (history as any)?.success ? (history as any).builds : [];
+      const pwBuilds = Array.isArray(allBuilds) ? allBuilds.filter((b: any) => b.type?.toLowerCase() === 'playwright') : [];
       setBuilds(pwBuilds);
-      setMasterCases(master);
-      setProject(projInfo);
       setTrendData(Array.isArray(trend) ? trend : []);
       if (pwBuilds.length && !selectedBuildId) setSelectedBuildId(pwBuilds[0].id);
     } catch (e) {
@@ -121,6 +123,16 @@ function PlaywrightDashboardContent() {
       if (initial) setLoading(false);
     }
   }, [selectedBuildId, projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    Promise.all([getTestCasesByProject(Number(projectId)), getProjectById(Number(projectId))])
+      .then(([master, projInfo]) => {
+        setMasterCases(Array.isArray(master) ? master : []);
+        setProject(projInfo);
+      })
+      .catch((e) => console.error(e));
+  }, [projectId]);
 
   useEffect(() => {
     if (!selectedBuildId) return;
