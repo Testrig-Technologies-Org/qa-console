@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
     Server, Cpu, Activity, Terminal, Timer, Search,
     ChevronRight, FileCode, Clock, Filter,
-    TrendingDown, Shield, Zap, Bug, Layers, ListTree
+    TrendingDown, Shield, Zap, Bug, Layers, ListTree, StopCircle, Loader2
 } from "lucide-react";
 import {
     BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -33,11 +33,23 @@ const formatDuration = (ms: number) => {
     return `${seconds}s`;
 };
 
-export function BuildOverview({ buildId, buildData, historyData = [] }: { buildId: any, buildData: any, historyData?: any[] }) {
+export function BuildOverview({ buildId, buildData, historyData = [], onStopBuild }: { buildId: any, buildData: any, historyData?: any[], onStopBuild?: () => void | Promise<void> }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const { theme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const [stopping, setStopping] = useState(false);
+
+    const handleStop = async () => {
+        if (!onStopBuild) return;
+        if (!window.confirm("Stop this build? Any tests still shown as running will be marked skipped — this doesn't affect the actual CI process, only how it's recorded here.")) return;
+        setStopping(true);
+        try {
+            await onStopBuild();
+        } finally {
+            setStopping(false);
+        }
+    };
 
     useEffect(() => setMounted(true), []);
 
@@ -132,7 +144,19 @@ export function BuildOverview({ buildId, buildData, historyData = [] }: { buildI
                         <Terminal size={14} className="text-emerald-600 dark:text-emerald-500" />
                         <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Build_Intelligence_Protocol</span>
                     </div>
-                    <StatusBadge status={isBuildStale(buildData, buildData.results) ? 'stalled' : buildData.status} />
+                    <div className="flex items-center gap-3">
+                        {buildData.status === 'running' && onStopBuild && (
+                            <button
+                                onClick={handleStop}
+                                disabled={stopping}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-rose-500/20 bg-rose-500/5 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                            >
+                                {stopping ? <Loader2 size={11} className="animate-spin" /> : <StopCircle size={11} />}
+                                {stopping ? 'Stopping...' : 'Stop Build'}
+                            </button>
+                        )}
+                        <StatusBadge status={isBuildStale(buildData, buildData.results) ? 'stalled' : buildData.status} />
+                    </div>
                 </div>
 
                 {/* KPI STRIP */}

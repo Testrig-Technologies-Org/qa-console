@@ -9,7 +9,8 @@ import {
   getPlaywrightTrend,
   getTestSteps,
   getLiveFrames,
-  getProjectById
+  getProjectById,
+  stopBuild
 } from "@/lib/actions";
 import {
   Loader2, Activity, Search, Cpu, Shield, Zap, TrendingUp,
@@ -169,6 +170,18 @@ function PlaywrightDashboardContent() {
         return { ...prev, results };
       });
     } finally { setLoadingLogs(null); }
+  };
+
+  const handleStopBuild = async () => {
+    if (!selectedBuildId) return;
+    const result = await stopBuild(selectedBuildId);
+    if ((result as any)?.error) {
+      console.error('Failed to stop build:', (result as any).error);
+      return;
+    }
+    // Refresh immediately rather than waiting for the next 5s poll tick.
+    const details = await getBuildDetails(selectedBuildId);
+    setBuildDetails(details);
   };
 
   const normalizedTests = useMemo(() => normalizePlaywrightResults(buildDetails?.results || []), [buildDetails]);
@@ -336,7 +349,7 @@ function PlaywrightDashboardContent() {
 
         {showAnalysis ? (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <BuildOverview buildId={selectedBuildId} buildData={buildDetails} />
+            <BuildOverview buildId={selectedBuildId} buildData={buildDetails} onStopBuild={handleStopBuild} />
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-500">

@@ -312,6 +312,54 @@ export async function getBuildDetails(buildId: number) {
     return null;
   }
 }
+
+/**
+ * Lets a user manually mark a stuck `running` build as stopped, rather than waiting for
+ * isBuildStale's timeout-based self-healing (getBuildDetails above, or the daily cron) to
+ * eventually catch it. Distinct from `failed`: this is the user saying "this isn't really
+ * running anymore," not a claim that the tests actually failed — kept separate so it doesn't
+ * skew pass/fail stats the way marking it `failed` would.
+ */
+export async function stopBuild(buildId: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { error: 'No organization found' };
+
+    const build = await db.query.automationBuilds.findFirst({
+      where: and(eq(automationBuilds.id, buildId), eq(automationBuilds.organizationId, membership.organizationId)),
+    });
+    if (!build) return { error: 'Build not found' };
+    if (build.status !== 'running') return { error: 'Build is not running' };
+
+    // Close out any test entries that never got a real result — they didn't fail on their own
+    // merits, the user just stopped the build before they could finish.
+    const results = await db.query.testResults.findMany({ where: eq(testResults.buildId, buildId) });
+    for (const r of results) {
+      const tests = Array.isArray(r.tests) ? (r.tests as any[]) : [];
+      let changed = false;
+      const updated = tests.map((t) => {
+        if (t.is_final) return t;
+        changed = true;
+        return { ...t, status: 'SKIPPED', is_final: true, stopped_manually: true };
+      });
+      if (changed) {
+        await db.update(testResults).set({ tests: updated as any }).where(eq(testResults.id, r.id));
+      }
+    }
+
+    await db.update(automationBuilds).set({ status: 'stopped' }).where(eq(automationBuilds.id, buildId));
+    return { success: true };
+  } catch (e: any) {
+    console.error('❌ stopBuild error:', e.message);
+    return { error: 'Failed to stop build' };
+  }
+}
+
 export async function updateTestCase(id: number, data: any) {
   try {
     const { id: _, createdAt, updatedAt, ...updateData } = data;

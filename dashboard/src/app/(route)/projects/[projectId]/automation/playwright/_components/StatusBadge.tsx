@@ -9,16 +9,19 @@ export function StatusBadge({ status }: { status: string }) {
   const isFailed = ['failed', 'fail', 'error'].includes(s);
   const isRunning = s === 'running';
   const isStalled = s === 'stalled';
+  const isStopped = s === 'stopped';
 
   const colorStyles = isFailed
     ? 'bg-rose-500/10 text-rose-600 dark:text-rose-500 border-rose-500/20'
     : isStalled
       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20'
-      : isRunning
-        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 animate-pulse'
-        : isPassed
-          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20'
-          : 'bg-muted/10 text-muted border-border'; // Fallback for skipped/unknown
+      : isStopped
+        ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+        : isRunning
+          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 animate-pulse'
+          : isPassed
+            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20'
+            : 'bg-muted/10 text-muted border-border'; // Fallback for skipped/unknown
 
   return (
     <span className={cn(
