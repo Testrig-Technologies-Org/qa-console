@@ -173,6 +173,50 @@ function PlaywrightDashboardContent() {
 
   const normalizedTests = useMemo(() => normalizePlaywrightResults(buildDetails?.results || []), [buildDetails]);
 
+  const uiIdFor = (t: any) => t.unique_key || `${t.id}-${t.project}-${t.title}`;
+
+  // Live steps/logs: while a row is expanded AND its test is still RUNNING, keep re-fetching its
+  // steps/logs so new ones appear as the test progresses, instead of only ever showing whatever
+  // existed at the moment it was expanded (which used to require collapsing and re-expanding, or
+  // reloading the page, to see anything new). The target list lives in a ref updated only when it
+  // actually changes, so the polling interval below doesn't need to be torn down and recreated on
+  // every buildDetails update (which happens on every tick, whether or not anything changed).
+  const expandedRunningTargetsRef = React.useRef<{ id: number; title: string }[]>([]);
+  const expandedRunningKey = useMemo(() => (
+    normalizedTests
+      .filter((t: any) => expandedTests.includes(uiIdFor(t)) && t.status === 'running')
+      .map((t: any) => `${t.id}::${t.title}`)
+      .join('|')
+  ), [normalizedTests, expandedTests]);
+
+  useEffect(() => {
+    expandedRunningTargetsRef.current = normalizedTests
+      .filter((t: any) => expandedTests.includes(uiIdFor(t)) && t.status === 'running')
+      .map((t: any) => ({ id: t.id, title: t.title }));
+  }, [expandedRunningKey]);
+
+  useEffect(() => {
+    if (!selectedBuildId || buildDetails?.status !== 'running') return;
+    const interval = setInterval(async () => {
+      const targets = expandedRunningTargetsRef.current;
+      if (targets.length === 0) return;
+      const fetched = await Promise.all(targets.map(async (t) => ({ title: t.title, data: await getTestSteps(t.id, t.title) })));
+      if (!fetched.some((f) => f.data)) return;
+      setBuildDetails((prev: any) => {
+        if (!prev) return prev;
+        const results = prev.results.map((spec: any) => ({
+          ...spec,
+          tests: (typeof spec.tests === 'string' ? JSON.parse(spec.tests) : spec.tests).map((t: any) => {
+            const match = fetched.find((f) => f.title === t.title && f.data);
+            return match ? { ...t, ...match.data, has_details: true } : t;
+          }),
+        }));
+        return { ...prev, results };
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [selectedBuildId, buildDetails?.status]);
+
   // Live view: a build can have several tests genuinely running at once (one per worker), each
   // needing its own frame — keyed by worker_id (Playwright's own parallelIndex, already present
   // on every test entry) so each RUNNING row gets its own live view instead of all of them
@@ -354,7 +398,7 @@ function PlaywrightDashboardContent() {
                   </div>
                   <div className="divide-y divide-border">
                     {tests.map((t: any) => {
-                      const uiId = t.unique_key || `${t.id}-${t.project}-${t.title}`;
+                      const uiId = uiIdFor(t);
                       return (
                         <div key={uiId} className="relative group hover:bg-muted/5 transition-colors">
                           <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' ? liveFrames[t.worker_id ?? t.test_entry?.worker_id ?? 0] : null} />
