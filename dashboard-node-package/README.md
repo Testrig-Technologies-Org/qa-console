@@ -69,15 +69,13 @@ While a test is running, the dashboard can show a live, low-fps view of the brow
 import { liveViewLaunchOptions } from "qa-console-playwright-reporter/live-view-watcher";
 
 export default defineConfig({
-  workers: process.env.CI ? 1 : undefined,
   // A bare string, same as reporter names — Playwright resolves it internally. Don't wrap this
   // in require.resolve(): that breaks with "require is not defined in ES module scope" in any
   // project whose playwright.config.ts is loaded as ESM (e.g. uses import.meta.url).
   globalSetup: process.env.CI ? "qa-console-playwright-reporter/live-view-watcher" : undefined,
   use: {
     // Opens Chrome's own debugging port; the watcher polls it for screenshots. Defaults to
-    // enabled only under CI (matching `workers` above) and port 9223 — pass { port, enabled }
-    // to override either. See "Why the CI gate matters" below before changing `enabled` yourself.
+    // enabled only under CI and port 9223+ — pass { port, enabled } to override either.
     launchOptions: liveViewLaunchOptions(),
   },
   // ...
@@ -86,7 +84,9 @@ export default defineConfig({
 
 The watcher polls that port every ~1s via Chrome's own DevTools protocol (`Page.captureScreenshot`) and forwards the JPEG to the dashboard — nothing but plain HTTP and WebSocket, so it behaves identically on any CI image that can run `npm install`.
 
-**Why the CI gate matters.** With `workers: 1`, Playwright launches exactly one Chromium process for the whole run (the browser is worker-scoped, contexts/pages are test-scoped), so there's never more than one process holding that port. With multiple workers, several Chromium processes launch in parallel and would all race to bind the *same fixed port* — and unlike a normal port conflict, the losing processes don't degrade gracefully: their browser launch hangs and eventually times out, failing those tests outright, not just skipping live view. `liveViewLaunchOptions()` defaults to `enabled: !!process.env.CI` for exactly this reason — use its `enabled` option instead of hand-rolling the condition if your worker count is computed some other way.
+**Safe with any worker count, not just `workers: 1`.** `liveViewLaunchOptions()` offsets the port by `process.env.TEST_PARALLEL_INDEX` — Playwright guarantees workers running at the same time get a different `parallelIndex` (`0..workers-1`), so each concurrent Chromium process gets its own port instead of racing to bind the same one. (A single fixed port doesn't degrade gracefully under contention: the losing process's browser launch hangs and times out, failing that test outright — not just skipping live view — so this matters even if you're fairly sure you're only running one worker.) With several workers simultaneously busy, the watcher shows one of them at a time (rotating which one each tick) rather than all at once, since the dashboard currently stores one live frame per build.
+
+**The watcher needs real environment variables, separately from your reporter config.** It runs as a separate process (`globalSetup`) with no visibility into whatever you passed as options to the `qa-console-playwright-reporter` entry in your `reporter` array — even if those are hardcoded there, `QA_CONSOLE_URL` / `QA_CONSOLE_API_KEY` / `QA_CONSOLE_PROJECT_ID` must also be set as actual environment variables in the environment running `playwright test`, or the watcher logs a warning and does nothing.
 
 It reads the same `QA_CONSOLE_URL` / `QA_CONSOLE_API_KEY` / `QA_CONSOLE_PROJECT_ID` (and `QA_CONSOLE_SESSION_ID`) environment variables the reporter's config already uses. Set `QA_CONSOLE_LIVE_VIEW=false` to disable it without removing the `globalSetup` line.
 

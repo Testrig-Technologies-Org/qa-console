@@ -46,15 +46,15 @@ export default defineConfig({
   reporter: reporters,
   /**
    * Streams a live view of the currently-running test to the QA Console dashboard — no test
-   * file changes needed. Polls the Chromium debugging port opened below (`use.launchOptions`)
-   * for a screenshot every ~1s; no ffmpeg or other external binary involved. Requires
-   * `workers: 1` (already the case on CI, above); no-ops otherwise. Same opt-in condition as
-   * the reporter.
+   * file changes needed. Polls each worker's Chromium debugging port (opened below via
+   * `use.launchOptions`) for a screenshot every ~1s; no ffmpeg or other external binary
+   * involved. No-ops without QA_CONSOLE_* configured. Same opt-in condition as the reporter.
+   *
+   * Playwright resolves this string itself (same as the bare 'qa-console-playwright-reporter'
+   * reporter name above) — no require.resolve() needed, and require.resolve() actively breaks
+   * in ESM-mode projects ("require is not defined in ES module scope") since it depends on the
+   * CJS `require` global existing, which isn't true just because this file happens to be CJS.
    */
-  // Playwright resolves this string itself (same as the bare 'qa-console-playwright-reporter'
-  // reporter name above) — no require.resolve() needed, and require.resolve() actively breaks
-  // in ESM-mode projects ("require is not defined in ES module scope") since it depends on the
-  // CJS `require` global existing, which isn't true just because this file happens to be CJS.
   globalSetup: qaConsoleConfigured ? 'qa-console-playwright-reporter/live-view-watcher' : undefined,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -67,12 +67,9 @@ export default defineConfig({
     /* Record video for every test — uploaded to the QA Console dashboard when reporting. */
     video: 'on',
 
-    /* Opens a debugging port the live-view watcher above polls for screenshots. Only added
-       under CI (workers: 1, above) — with more than one worker, multiple Chromium processes
-       would race to bind the SAME fixed port simultaneously, and the losers don't degrade
-       gracefully: their browser launch hangs and times out, breaking those tests entirely.
-       liveViewLaunchOptions() defaults to enabled: !!process.env.CI for exactly this reason —
-       see the qa-console-playwright-reporter README before changing that default yourself. */
+    /* Opens a debugging port the live-view watcher above polls for screenshots — a different
+       port per worker (offset by TEST_PARALLEL_INDEX), so it's safe under any worker count, not
+       just workers: 1. Only added under CI (enabled: !!process.env.CI is the default). */
     launchOptions: qaConsoleConfigured ? liveViewLaunchOptions() : undefined,
   },
 

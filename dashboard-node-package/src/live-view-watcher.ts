@@ -5,7 +5,7 @@ import { QAConsoleClient } from "./client";
 // A "live" feel for a QA dashboard doesn't need more than about 1 frame/sec.
 const POLL_INTERVAL_MS = 1200;
 const CDP_TIMEOUT_MS = 3000;
-const DEFAULT_PORT = 9223;
+const DEFAULT_BASE_PORT = 9223;
 
 interface LiveViewConfig {
   client: QAConsoleClient;
@@ -24,7 +24,7 @@ function getConfig(): LiveViewConfig | null {
   }
   if (!baseUrl || !apiKey || !projectId) {
     console.warn(
-      "[qa-console-live-view] Skipping — QA_CONSOLE_URL / QA_CONSOLE_API_KEY / QA_CONSOLE_PROJECT_ID must all be set (same vars the reporter uses).",
+      "[qa-console-live-view] Skipping — QA_CONSOLE_URL / QA_CONSOLE_API_KEY / QA_CONSOLE_PROJECT_ID must all be set as real environment variables (not just passed as reporter options — the watcher runs as a separate process with no visibility into your playwright.config.ts values).",
     );
     return null;
   }
@@ -35,30 +35,30 @@ function getConfig(): LiveViewConfig | null {
   };
 }
 
-function getPort(): number {
-  return Number(process.env.QA_CONSOLE_LIVE_VIEW_PORT) || DEFAULT_PORT;
+function getBasePort(): number {
+  return Number(process.env.QA_CONSOLE_LIVE_VIEW_PORT) || DEFAULT_BASE_PORT;
 }
 
 /**
  * Convenience for playwright.config.ts's `use.launchOptions`: returns the debugging-port arg the
- * watcher needs, but ONLY when `enabled` is true (defaults to `!!process.env.CI`, matching the
- * common `workers: process.env.CI ? 1 : undefined` pattern) — otherwise `undefined`, so
- * Playwright adds nothing.
+ * watcher needs, but ONLY when `enabled` is true (defaults to `!!process.env.CI`) — otherwise
+ * `undefined`, so Playwright adds nothing.
  *
- * This gate matters more than it looks: with more than one worker, several Chromium processes
- * launch in parallel and would all race to bind the *same fixed port*. Unlike a normal port
- * conflict, the losing processes don't degrade gracefully — their browser launch hangs and
- * eventually times out, failing those tests outright. The watcher's own `workers > 1` check in
- * `globalSetup` below can't prevent this on its own, since by the time it runs the browsers have
- * already been launched with this argument — the gating has to happen here, at the argument's
- * source. Prefer this helper over hand-writing the condition in your config.
+ * The port is offset by `process.env.TEST_PARALLEL_INDEX` — Playwright guarantees workers
+ * running at the same time have a different `parallelIndex` (0..workers-1), so each concurrent
+ * Chromium process gets its own port instead of racing to bind the same one. A fixed single port
+ * only worked when exactly one worker could ever be active; with N workers running in parallel
+ * (`workers` above N > 1 for real, not just N > 1 in some other project's unrelated config), the
+ * losing processes wouldn't degrade gracefully — their browser launch would hang and time out,
+ * failing those tests outright. This is safe regardless of your actual worker count.
  */
 export function liveViewLaunchOptions(options?: { port?: number; enabled?: boolean }): { args: string[] } | undefined {
   const enabled = options?.enabled ?? !!process.env.CI;
   if (!enabled) return undefined;
 
-  const port = options?.port ?? getPort();
-  return { args: [`--remote-debugging-port=${port}`] };
+  const basePort = options?.port ?? getBasePort();
+  const parallelIndex = Number(process.env.TEST_PARALLEL_INDEX ?? 0);
+  return { args: [`--remote-debugging-port=${basePort + parallelIndex}`] };
 }
 
 interface CdpTarget {
@@ -119,31 +119,44 @@ function captureFrame(wsUrl: string): Promise<string | null> {
 }
 
 /**
- * Playwright globalSetup: polls the Chromium debugging port for a screenshot of whatever page
- * is currently active and forwards it to the QA Console dashboard — no test file changes, no
- * external binaries. Requires two things in playwright.config.ts: this as `globalSetup`, and
- * `liveViewLaunchOptions()` (above) as `use.launchOptions` (see README) — the latter is what
- * actually keeps `workers > 1` runs safe, this check here is a second, independent guard so a
- * misconfigured launchOptions can't make the watcher show frames from the wrong worker.
+ * Finds whichever worker currently has an active page, across all `workerCount` ports, and
+ * grabs one frame from it. With several workers simultaneously busy, this surfaces one of them
+ * (rotating the starting point each tick so it's not always the same worker) rather than trying
+ * to show all of them at once — the dashboard stores/displays one live frame per build, a bigger
+ * change than this feature needs right now.
+ */
+async function captureAnyActiveFrame(basePort: number, workerCount: number, rotate: number): Promise<string | null> {
+  for (let i = 0; i < workerCount; i++) {
+    const port = basePort + ((i + rotate) % workerCount);
+    const target = await findPageTarget(port);
+    if (!target?.webSocketDebuggerUrl) continue;
+    const frame = await captureFrame(target.webSocketDebuggerUrl);
+    if (frame) return frame;
+  }
+  return null;
+}
+
+/**
+ * Playwright globalSetup: polls each worker's Chromium debugging port for a screenshot of
+ * whatever page is currently active and forwards it to the QA Console dashboard — no test file
+ * changes, no external binaries. Requires two things in playwright.config.ts: this as
+ * `globalSetup`, and `liveViewLaunchOptions()` (above) as `use.launchOptions` (see README).
  */
 export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
   const liveConfig = getConfig();
   if (!liveConfig) return async () => {};
 
-  if (config.workers > 1) {
-    console.warn(
-      `[qa-console-live-view] Skipping — requires "workers: 1" so only one Chromium instance owns the debugging port at a time; this run is configured for ${config.workers} workers.`,
-    );
-    return async () => {};
-  }
-
-  const port = getPort();
-  console.log(`[qa-console-live-view] Watching Chromium debugging port ${port} for live frames.`);
+  const basePort = getBasePort();
+  const workerCount = Math.max(1, config.workers);
+  console.log(
+    `[qa-console-live-view] Watching Chromium debugging port${workerCount > 1 ? "s" : ""} ${basePort}${workerCount > 1 ? `-${basePort + workerCount - 1}` : ""} for live frames (${workerCount} worker${workerCount > 1 ? "s" : ""}).`,
+  );
 
   let stopped = false;
   let firstFramePosted = false;
   let loggedNoTargetYet = false;
   let loggedPostFailure = false;
+  let rotate = 0;
   const startedAt = Date.now();
 
   const loop = (async () => {
@@ -152,21 +165,18 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
       if (stopped) break;
 
       try {
-        const target = await findPageTarget(port);
-        if (!target?.webSocketDebuggerUrl) {
+        const frame = await captureAnyActiveFrame(basePort, workerCount, rotate++);
+        if (!frame) {
           // Only worth flagging if we've had a while and never found anything — a normal gap
-          // between tests, or the first second or two before the browser launches, is expected.
+          // between tests, or the first second or two before browsers launch, is expected.
           if (!firstFramePosted && !loggedNoTargetYet && Date.now() - startedAt > 30_000) {
             loggedNoTargetYet = true;
             console.warn(
-              `[qa-console-live-view] No Chromium page found on debugging port ${port} after 30s — is --remote-debugging-port=${port} actually in launchOptions.args? (liveViewLaunchOptions() only adds it when enabled.)`,
+              `[qa-console-live-view] No Chromium page found on ${basePort}-${basePort + workerCount - 1} after 30s — is liveViewLaunchOptions() actually wired into use.launchOptions?`,
             );
           }
           continue;
         }
-
-        const frame = await captureFrame(target.webSocketDebuggerUrl);
-        if (!frame) continue;
 
         await liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, frameBase64: frame }).then(
           () => {
