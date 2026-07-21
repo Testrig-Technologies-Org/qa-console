@@ -18,7 +18,16 @@ function getConfig(): LiveViewConfig | null {
   const projectId = process.env.QA_CONSOLE_PROJECT_ID;
   const enabled = process.env.QA_CONSOLE_LIVE_VIEW !== "false";
 
-  if (!enabled || !baseUrl || !apiKey || !projectId) return null;
+  if (!enabled) {
+    console.log("[qa-console-live-view] Disabled via QA_CONSOLE_LIVE_VIEW=false.");
+    return null;
+  }
+  if (!baseUrl || !apiKey || !projectId) {
+    console.warn(
+      "[qa-console-live-view] Skipping — QA_CONSOLE_URL / QA_CONSOLE_API_KEY / QA_CONSOLE_PROJECT_ID must all be set (same vars the reporter uses).",
+    );
+    return null;
+  }
 
   return {
     client: new QAConsoleClient({ baseUrl, apiKey, projectId: Number(projectId) }),
@@ -129,7 +138,13 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   }
 
   const port = getPort();
+  console.log(`[qa-console-live-view] Watching Chromium debugging port ${port} for live frames.`);
+
   let stopped = false;
+  let firstFramePosted = false;
+  let loggedNoTargetYet = false;
+  let loggedPostFailure = false;
+  const startedAt = Date.now();
 
   const loop = (async () => {
     while (!stopped) {
@@ -138,12 +153,35 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
 
       try {
         const target = await findPageTarget(port);
-        if (!target?.webSocketDebuggerUrl) continue;
+        if (!target?.webSocketDebuggerUrl) {
+          // Only worth flagging if we've had a while and never found anything — a normal gap
+          // between tests, or the first second or two before the browser launches, is expected.
+          if (!firstFramePosted && !loggedNoTargetYet && Date.now() - startedAt > 30_000) {
+            loggedNoTargetYet = true;
+            console.warn(
+              `[qa-console-live-view] No Chromium page found on debugging port ${port} after 30s — is --remote-debugging-port=${port} actually in launchOptions.args? (liveViewLaunchOptions() only adds it when enabled.)`,
+            );
+          }
+          continue;
+        }
 
         const frame = await captureFrame(target.webSocketDebuggerUrl);
         if (!frame) continue;
 
-        await liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, frameBase64: frame }).catch(() => {});
+        await liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, frameBase64: frame }).then(
+          () => {
+            if (!firstFramePosted) {
+              firstFramePosted = true;
+              console.log("[qa-console-live-view] First live frame posted successfully.");
+            }
+          },
+          (error) => {
+            if (!loggedPostFailure) {
+              loggedPostFailure = true;
+              console.warn(`[qa-console-live-view] Failed to post live frame: ${(error as Error).message}`);
+            }
+          },
+        );
       } catch {
         // A bad tick should never kill the watcher loop.
       }
