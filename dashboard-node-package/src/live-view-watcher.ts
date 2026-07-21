@@ -156,6 +156,7 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   let firstFramePosted = false;
   let loggedNoTargetYet = false;
   let loggedPostFailure = false;
+  let loggedSkipped = false;
   let rotate = 0;
   const startedAt = Date.now();
 
@@ -179,7 +180,22 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
         }
 
         await liveConfig.client.postLiveFrame({ sessionId: liveConfig.sessionId, frameBase64: frame }).then(
-          () => {
+          ({ skipped }) => {
+            if (skipped) {
+              // The route responds 200 here (not an error) whenever it can't find a matching
+              // RUNNING build for this project right now — most likely several builds are
+              // RUNNING simultaneously for this project (no session_id to tell them apart, so
+              // it guessed the most recent one) and it isn't the one actually executing, or the
+              // build already finished. Frames are being sent but silently going nowhere useful
+              // either way — this would otherwise look identical to genuine success.
+              if (!loggedSkipped) {
+                loggedSkipped = true;
+                console.warn(
+                  "[qa-console-live-view] Dashboard has no matching RUNNING build for this project right now — frames are being posted but dropped server-side. If multiple builds can run concurrently for this project, set QA_CONSOLE_SESSION_ID so the dashboard can tell them apart.",
+                );
+              }
+              return;
+            }
             if (!firstFramePosted) {
               firstFramePosted = true;
               console.log("[qa-console-live-view] First live frame posted successfully.");

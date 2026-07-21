@@ -58,12 +58,17 @@ export class QAConsoleClient {
     await this.request("/api/automation/build", "PATCH", { build_id: buildId, status });
   }
 
-  async postLiveFrame(params: LiveFrameParams & { frameBase64: string }): Promise<void> {
-    await this.post("/api/automation/live-frame", {
+  // Returns whether the server actually stored the frame. The route responds 200 with
+  // { skipped: true } (not an error) when it can't find a matching RUNNING build for this
+  // project right now — a genuinely different case from a network/auth failure, and one the
+  // caller needs to be able to tell apart from a real success instead of both looking identical.
+  async postLiveFrame(params: LiveFrameParams & { frameBase64: string }): Promise<{ skipped: boolean }> {
+    const data = await this.post("/api/automation/live-frame", {
       project_id: this.options.projectId,
       session_id: params.sessionId,
       frame_base64: params.frameBase64,
     });
+    return { skipped: !!data?.skipped };
   }
 
   async deleteLiveFrame(params: LiveFrameParams): Promise<void> {
