@@ -66,12 +66,16 @@ Coverage stats on the dashboard are computed from these tags. Untagged tests rep
 While a test is running, the dashboard can show a live, low-fps view of the browser instead of just a "running" spinner — useful for headless CI runs where there's otherwise no way to see what a test is doing. This is entirely config-level — no test files to change, and no external binaries (no `ffmpeg`, nothing to install beyond `npm install`). Add two things to `playwright.config.ts`:
 
 ```ts
+import { liveViewLaunchOptions } from "qa-console-playwright-reporter/live-view-watcher";
+
 export default defineConfig({
-  globalSetup: require.resolve("qa-console-playwright-reporter/live-view-watcher"),
+  workers: process.env.CI ? 1 : undefined,
+  globalSetup: process.env.CI ? require.resolve("qa-console-playwright-reporter/live-view-watcher") : undefined,
   use: {
-    // Opens Chrome's own debugging port; the watcher polls it for screenshots. Pick any free
-    // port — override with QA_CONSOLE_LIVE_VIEW_PORT if 9223 conflicts with something in your CI.
-    launchOptions: { args: ["--remote-debugging-port=9223"] },
+    // Opens Chrome's own debugging port; the watcher polls it for screenshots. Defaults to
+    // enabled only under CI (matching `workers` above) and port 9223 — pass { port, enabled }
+    // to override either. See "Why the CI gate matters" below before changing `enabled` yourself.
+    launchOptions: liveViewLaunchOptions(),
   },
   // ...
 });
@@ -79,7 +83,7 @@ export default defineConfig({
 
 The watcher polls that port every ~1s via Chrome's own DevTools protocol (`Page.captureScreenshot`) and forwards the JPEG to the dashboard — nothing but plain HTTP and WebSocket, so it behaves identically on any CI image that can run `npm install`.
 
-Requires **`workers: 1`.** Only one test runs at a time, so there's no ambiguity about which browser's debugging port is "the" live one. With more workers, the watcher logs a warning and does nothing (it never guesses and risks showing the wrong test) — but leaving `--remote-debugging-port` in `launchOptions` regardless is harmless: if two Chromium processes ever did race for that port, only one wins the bind and Chrome runs normally either way, it never fails the browser launch.
+**Why the CI gate matters.** With `workers: 1`, Playwright launches exactly one Chromium process for the whole run (the browser is worker-scoped, contexts/pages are test-scoped), so there's never more than one process holding that port. With multiple workers, several Chromium processes launch in parallel and would all race to bind the *same fixed port* — and unlike a normal port conflict, the losing processes don't degrade gracefully: their browser launch hangs and eventually times out, failing those tests outright, not just skipping live view. `liveViewLaunchOptions()` defaults to `enabled: !!process.env.CI` for exactly this reason — use its `enabled` option instead of hand-rolling the condition if your worker count is computed some other way.
 
 It reads the same `QA_CONSOLE_URL` / `QA_CONSOLE_API_KEY` / `QA_CONSOLE_PROJECT_ID` (and `QA_CONSOLE_SESSION_ID`) environment variables the reporter's config already uses. Set `QA_CONSOLE_LIVE_VIEW=false` to disable it without removing the `globalSetup` line.
 

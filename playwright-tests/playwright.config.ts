@@ -1,4 +1,5 @@
 import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
+import { liveViewLaunchOptions } from 'qa-console-playwright-reporter/live-view-watcher';
 
 /**
  * Read environment variables from file.
@@ -14,7 +15,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
  * standalone without a dashboard configured.
  */
 const qaConsoleConfigured = !!(process.env.QA_CONSOLE_URL && process.env.QA_CONSOLE_API_KEY && process.env.QA_CONSOLE_PROJECT_ID);
-const LIVE_VIEW_PORT = process.env.QA_CONSOLE_LIVE_VIEW_PORT || '9223';
 
 const reporters: ReporterDescription[] = [['html'], ['list']];
 if (qaConsoleConfigured) {
@@ -63,10 +63,13 @@ export default defineConfig({
     /* Record video for every test — uploaded to the QA Console dashboard when reporting. */
     video: 'on',
 
-    /* Opens a debugging port the live-view watcher above polls for screenshots. Safe even if
-       unused: Chrome falls back to running without the debug port active if the bind ever
-       fails, it never fails the browser launch itself. */
-    launchOptions: qaConsoleConfigured ? { args: [`--remote-debugging-port=${LIVE_VIEW_PORT}`] } : undefined,
+    /* Opens a debugging port the live-view watcher above polls for screenshots. Only added
+       under CI (workers: 1, above) — with more than one worker, multiple Chromium processes
+       would race to bind the SAME fixed port simultaneously, and the losers don't degrade
+       gracefully: their browser launch hangs and times out, breaking those tests entirely.
+       liveViewLaunchOptions() defaults to enabled: !!process.env.CI for exactly this reason —
+       see the qa-console-playwright-reporter README before changing that default yourself. */
+    launchOptions: qaConsoleConfigured ? liveViewLaunchOptions() : undefined,
   },
 
   /* Configure projects for major browsers */

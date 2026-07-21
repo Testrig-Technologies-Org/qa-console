@@ -30,6 +30,28 @@ function getPort(): number {
   return Number(process.env.QA_CONSOLE_LIVE_VIEW_PORT) || DEFAULT_PORT;
 }
 
+/**
+ * Convenience for playwright.config.ts's `use.launchOptions`: returns the debugging-port arg the
+ * watcher needs, but ONLY when `enabled` is true (defaults to `!!process.env.CI`, matching the
+ * common `workers: process.env.CI ? 1 : undefined` pattern) — otherwise `undefined`, so
+ * Playwright adds nothing.
+ *
+ * This gate matters more than it looks: with more than one worker, several Chromium processes
+ * launch in parallel and would all race to bind the *same fixed port*. Unlike a normal port
+ * conflict, the losing processes don't degrade gracefully — their browser launch hangs and
+ * eventually times out, failing those tests outright. The watcher's own `workers > 1` check in
+ * `globalSetup` below can't prevent this on its own, since by the time it runs the browsers have
+ * already been launched with this argument — the gating has to happen here, at the argument's
+ * source. Prefer this helper over hand-writing the condition in your config.
+ */
+export function liveViewLaunchOptions(options?: { port?: number; enabled?: boolean }): { args: string[] } | undefined {
+  const enabled = options?.enabled ?? !!process.env.CI;
+  if (!enabled) return undefined;
+
+  const port = options?.port ?? getPort();
+  return { args: [`--remote-debugging-port=${port}`] };
+}
+
 interface CdpTarget {
   type: string;
   webSocketDebuggerUrl?: string;
@@ -90,14 +112,10 @@ function captureFrame(wsUrl: string): Promise<string | null> {
 /**
  * Playwright globalSetup: polls the Chromium debugging port for a screenshot of whatever page
  * is currently active and forwards it to the QA Console dashboard — no test file changes, no
- * external binaries. Requires two lines in playwright.config.ts: this as `globalSetup`, and
- * `--remote-debugging-port=<port>` in `use.launchOptions.args` (see README).
- *
- * Requires `workers: 1` — with more than one worker, multiple Chromium processes would race to
- * bind the same debugging port. Chrome doesn't fail to launch if that bind loses (it just runs
- * without the debug port active), so this only degrades live view, it never breaks the test run
- * — but to avoid ever showing a frame from the wrong worker's browser, the watcher itself stays
- * off whenever more than one worker is configured.
+ * external binaries. Requires two things in playwright.config.ts: this as `globalSetup`, and
+ * `liveViewLaunchOptions()` (above) as `use.launchOptions` (see README) — the latter is what
+ * actually keeps `workers > 1` runs safe, this check here is a second, independent guard so a
+ * misconfigured launchOptions can't make the watcher show frames from the wrong worker.
  */
 export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
   const liveConfig = getConfig();
