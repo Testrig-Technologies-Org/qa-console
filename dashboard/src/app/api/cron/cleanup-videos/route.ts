@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import { lt } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { db } from '../../../../../db';
-import { automationLiveFrames } from '../../../../../db/schema';
+import { automationBuilds, automationLiveFrames, testResults } from '../../../../../db/schema';
+import { isBuildStale } from '../../../../lib/build-staleness';
 
 cloudinary.config({ secure: true });
 
@@ -22,6 +23,32 @@ async function cleanupStaleLiveFrames(): Promise<number> {
   }
 }
 
+/**
+ * Backstop for builds nobody is actively viewing — getBuildDetails already self-heals a stale
+ * build the moment someone opens it, but a build no one looks at would otherwise stay stuck at
+ * `running` forever (skewing pass-rate stats/trends) until this once-daily sweep catches it.
+ */
+async function markStaleBuildsFailed(): Promise<number> {
+  try {
+    const runningBuilds = await db.query.automationBuilds.findMany({
+      where: eq(automationBuilds.status, 'running'),
+    });
+
+    let marked = 0;
+    for (const build of runningBuilds) {
+      const results = await db.query.testResults.findMany({ where: eq(testResults.buildId, build.id) });
+      if (isBuildStale(build, results)) {
+        await db.update(automationBuilds).set({ status: 'failed' }).where(eq(automationBuilds.id, build.id));
+        marked++;
+      }
+    }
+    return marked;
+  } catch (error: any) {
+    console.error('Stale build cleanup error:', error.message);
+    return 0;
+  }
+}
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -33,6 +60,7 @@ export async function GET(req: Request) {
   let nextCursor: string | undefined;
 
   const staleFramesDeleted = await cleanupStaleLiveFrames();
+  const staleBuildsMarkedFailed = await markStaleBuildsFailed();
 
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
@@ -57,7 +85,7 @@ export async function GET(req: Request) {
       if (!nextCursor) break;
     }
 
-    return NextResponse.json({ success: true, deleted, staleFramesDeleted, cutoff: cutoff.toISOString() });
+    return NextResponse.json({ success: true, deleted, staleFramesDeleted, staleBuildsMarkedFailed, cutoff: cutoff.toISOString() });
   } catch (error: any) {
     console.error('Video cleanup cron error:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });

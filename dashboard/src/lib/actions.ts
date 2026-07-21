@@ -5,6 +5,7 @@ import { automationBuilds, automationLiveFrames, generateProjectApiKey, organiza
 import { revalidatePath } from "next/cache";
 import { db } from '../../db';
 import { auth } from '@clerk/nextjs/server';
+import { isBuildStale } from './build-staleness';
 
 
 // this is fixed 
@@ -291,6 +292,19 @@ export async function getBuildDetails(buildId: number) {
           : [],
       })),
     };
+
+    // Self-healing: a build's CI process can die without ever calling the completion endpoint
+    // (job timeout, OOM, a network blip dropping the final report), leaving it stuck at
+    // `running` in the database forever — not just a display issue, since that skews pass-rate
+    // stats and trend charts everywhere else `automationBuilds.status` is read directly.
+    // Correcting it here means it self-heals the moment anyone actually looks at it, without
+    // waiting on the once-daily cleanup cron (see there for the backstop covering builds nobody
+    // is actively viewing).
+    if (isBuildStale(finalResult, finalResult.results)) {
+      await db.update(automationBuilds).set({ status: 'failed' }).where(eq(automationBuilds.id, buildId));
+      finalResult.status = 'failed';
+    }
+
     return finalResult;
   } catch (e: any) {
     console.error('❌ getBuildDetails error:', e.message);
