@@ -2,8 +2,7 @@ import WebSocket from "ws";
 import type { FullConfig } from "@playwright/test";
 import { QAConsoleClient } from "./client";
 
-// A "live" feel for a QA dashboard doesn't need more than about 1 frame/sec.
-const POLL_INTERVAL_MS = 1200;
+const POLL_INTERVAL_MS = 50;
 const CDP_TIMEOUT_MS = 3000;
 const DEFAULT_BASE_PORT = 9223;
 

@@ -189,7 +189,7 @@ function PlaywrightDashboardContent() {
       if (!cancelled && data?.frame_base64) setLiveFrame(data.frame_base64);
     };
     poll();
-    const interval = setInterval(poll, 1200);
+    const interval = setInterval(poll, 50);
     return () => { cancelled = true; clearInterval(interval); };
   }, [selectedBuildId, buildDetails?.status]);
 
