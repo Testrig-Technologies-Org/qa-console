@@ -15,10 +15,15 @@ export function FilterButton({ active, label, count, onClick, color }: any) {
       : 'text-muted border-transparent hover:bg-rose-500/5 hover:text-rose-600 dark:hover:text-rose-500',
     
     // Running/Active State
-    indigo: active 
-      ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30' 
+    indigo: active
+      ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
       : 'text-muted border-transparent hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400',
-    
+
+    // Skipped State
+    amber: active
+      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/30'
+      : 'text-muted border-transparent hover:bg-amber-500/5 hover:text-amber-600 dark:hover:text-amber-500',
+
     // Total/Registry State (The high-contrast toggle)
     zinc: active 
       ? 'bg-foreground text-background border-foreground shadow-lg' 

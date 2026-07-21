@@ -20,6 +20,17 @@ const cleanAnsi = (text: any): string => {
     return text.replace(/[\u001b\x1b]\[[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').trim();
 };
 
+// A build stuck in `running` this long almost certainly isn't still going — its CI process
+// likely crashed or got killed before it could report a final status (network blip on the last
+// report, job timeout, OOM, etc.). Flagged here at read time rather than via a background job:
+// this project's cron only runs once a day, far too slow to catch this promptly.
+const STALE_BUILD_MS = 3 * 60 * 60 * 1000;
+
+const isBuildStale = (buildData: any): boolean => {
+    if (buildData?.status !== 'running' || !buildData?.createdAt) return false;
+    return Date.now() - new Date(buildData.createdAt).getTime() > STALE_BUILD_MS;
+};
+
 const formatDuration = (ms: number) => {
     if (ms <= 0) return "0s";
     if (ms < 1000) return `${ms}ms`;
@@ -131,7 +142,7 @@ export function BuildOverview({ buildId, buildData, historyData = [] }: { buildI
                         <Terminal size={14} className="text-emerald-600 dark:text-emerald-500" />
                         <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Build_Intelligence_Protocol</span>
                     </div>
-                    <StatusBadge status={buildData.status} />
+                    <StatusBadge status={isBuildStale(buildData) ? 'stalled' : buildData.status} />
                 </div>
 
                 {/* KPI STRIP */}

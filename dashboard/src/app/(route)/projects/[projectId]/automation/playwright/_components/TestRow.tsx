@@ -1,10 +1,10 @@
 'use client';
 
 import React from "react";
-import { 
-  CheckCircle2, XCircle, Loader2, ChevronDown, ChevronRight, 
-  Video, ExternalLink, Terminal, Cpu, HardDrive, 
-  Layers, ListTree, Monitor 
+import {
+  CheckCircle2, XCircle, Loader2, ChevronDown, ChevronRight,
+  Video, ExternalLink, Terminal, Cpu, HardDrive,
+  Layers, ListTree, Monitor, SkipForward, AlertTriangle
 } from "lucide-react";
 import { LogTerminal } from "./LogTerminal";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,18 @@ const checkHasLogs = (test: any): boolean => {
 
 const getVideoUrl = (test: any): string | null => {
   return test?.video_url || test?.attachments?.paths?.video || test?.test_entry?.attachments?.paths?.video || null;
+};
+
+// A single test entry stuck at RUNNING this long has almost certainly been orphaned (its
+// worker process died before it could report a final result) rather than genuinely still
+// executing — no real test takes 45+ minutes. `created_at` is set server-side the moment a
+// test's RUNNING report first lands (see /api/automation/result), so it survives even though
+// the entry itself never gets a follow-up update.
+const TEST_STALE_MS = 45 * 60 * 1000;
+
+const isTestStale = (test: any): boolean => {
+  if (test?.status !== 'running' || !test?.created_at) return false;
+  return Date.now() - new Date(test.created_at).getTime() > TEST_STALE_MS;
 };
 
 const getScreenshotUrl = (test: any): string | null => {
@@ -113,6 +125,7 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }
 
   const videoUrl = getVideoUrl(test);
   const screenshotUrl = getScreenshotUrl(test);
+  const stale = isTestStale(test);
   const steps = getSteps(test);
   const error = getError(test);
   const hasLogs = checkHasLogs(test);
@@ -130,8 +143,11 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }
     <div className={cn("transition-all border-b border-border", isExpanded ? "bg-muted/5" : "hover:bg-muted/[0.02]")}>
       <button onClick={onToggle} className="w-full flex items-center justify-between px-8 py-6 text-left group">
         <div className="flex items-center gap-6">
-          {test?.status === 'running' ? <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /> : 
-           test?.status === 'passed' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}
+          {stale ? <AlertTriangle className="w-5 h-5 text-amber-500" /> :
+           test?.status === 'running' ? <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /> :
+           test?.status === 'passed' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> :
+           test?.status === 'skipped' ? <SkipForward className="w-5 h-5 text-amber-500" /> :
+           <XCircle className="w-5 h-5 text-rose-500" />}
           
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
@@ -139,9 +155,15 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }
                 Run {test?.run_number || 1}
               </span>
               {test?.status === 'running' && (
-                <span className="flex items-center gap-1 text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase tracking-widest animate-pulse">
-                   Active Stream
-                </span>
+                stale ? (
+                  <span className="flex items-center gap-1 text-[8px] font-black bg-amber-500/10 text-amber-600 dark:text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">
+                    Stalled — No Update
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase tracking-widest animate-pulse">
+                     Active Stream
+                  </span>
+                )
               )}
               {hasLogs && (
                 <span className="flex items-center gap-1 text-[8px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest">
@@ -198,8 +220,9 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }
           )}
 
           {/* Live View — screencast frames while the test is still running, replaced by the
-              recorded video below once it finishes */}
-          {test?.status === 'running' && (
+              recorded video below once it finishes. Suppressed once stale: an orphaned test
+              will never produce another frame, so a spinner here would just mislead. */}
+          {test?.status === 'running' && !stale && (
             <div className="ml-12 space-y-3 max-w-xl">
               <div className="flex items-center gap-2 px-1 text-indigo-600 dark:text-indigo-400 font-black text-[10px] uppercase tracking-widest">
                 <Monitor size={16} className="animate-pulse" /> Live View
@@ -215,6 +238,12 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }
                   <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
                 </div>
               )}
+            </div>
+          )}
+          {test?.status === 'running' && stale && (
+            <div className="ml-12 flex items-center gap-3 px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-500 text-xs font-bold">
+              <AlertTriangle size={16} />
+              No update since this test started — its CI worker likely crashed or was killed before reporting a final result.
             </div>
           )}
 

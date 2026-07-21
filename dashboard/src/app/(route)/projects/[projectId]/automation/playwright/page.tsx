@@ -89,7 +89,7 @@ function PlaywrightDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandedTests, setExpandedTests] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'passed' | 'failed' | 'running'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'passed' | 'failed' | 'running' | 'skipped'>('all');
   const [projectSearch, setProjectSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isShared, setIsShared] = useState(false);
@@ -194,11 +194,12 @@ function PlaywrightDashboardContent() {
   }, [selectedBuildId, buildDetails?.status]);
 
   const currentStats = useMemo(() => {
-    const s = { total: 0, passed: 0, failed: 0, running: 0 };
+    const s = { total: 0, passed: 0, failed: 0, running: 0, skipped: 0 };
     normalizedTests.forEach((t: any) => {
       s.total++;
       if (t.status === 'running') s.running++;
       else if (t.status === 'passed') s.passed++;
+      else if (t.status === 'skipped') s.skipped++;
       else s.failed++;
     });
     return s;
@@ -218,7 +219,8 @@ function PlaywrightDashboardContent() {
   const pieData = useMemo(() => [
     { name: 'FAIL', value: currentStats.failed, color: '#ef4444' },
     { name: 'PASS', value: currentStats.passed, color: '#10b981' },
-    { name: 'LIVE', value: currentStats.running, color: '#3b82f6' }
+    { name: 'LIVE', value: currentStats.running, color: '#3b82f6' },
+    { name: 'SKIP', value: currentStats.skipped, color: '#f59e0b' }
   ].filter(d => d.value > 0), [currentStats]);
 
   if (loading) return (
@@ -324,6 +326,7 @@ function PlaywrightDashboardContent() {
                 <FilterButton active={filterStatus === 'passed'} label="PASSED" count={currentStats.passed} onClick={() => setFilterStatus('passed')} color="green" />
                 <FilterButton active={filterStatus === 'failed'} label="FAILED" count={currentStats.failed} onClick={() => setFilterStatus('failed')} color="red" />
                 <FilterButton active={filterStatus === 'running'} label="ACTIVE" count={currentStats.running} onClick={() => setFilterStatus('running')} color="indigo" />
+                <FilterButton active={filterStatus === 'skipped'} label="SKIPPED" count={currentStats.skipped} onClick={() => setFilterStatus('skipped')} color="amber" />
               </div>
               <div className="flex items-center gap-4 px-4 bg-card border border-border rounded-sm group focus-within:border-muted transition-all">
                 <Search size={14} className="text-muted" />
