@@ -123,12 +123,25 @@ function PlaywrightDashboardContent() {
 
   useEffect(() => {
     if (!selectedBuildId) return;
-    (async () => {
-      setLoadingDetails(true);
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval>;
+
+    const fetchDetails = async (showLoading: boolean) => {
+      if (showLoading) setLoadingDetails(true);
       const details = await getBuildDetails(selectedBuildId);
+      if (cancelled) return;
       setBuildDetails(details);
-      setLoadingDetails(false);
-    })();
+      if (showLoading) setLoadingDetails(false);
+      // Stop polling once the build has a final status — nothing left to refresh.
+      if ((details as any)?.status !== 'running') clearInterval(interval);
+    };
+
+    fetchDetails(true);
+    // Refreshes the whole test list/logs while a build is RUNNING, so status changes and newly
+    // finished tests show up without the user having to reselect the build.
+    interval = setInterval(() => { if (!document.hidden) fetchDetails(false); }, 5000);
+
+    return () => { cancelled = true; clearInterval(interval); };
   }, [selectedBuildId]);
 
   useEffect(() => {
