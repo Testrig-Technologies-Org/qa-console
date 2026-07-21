@@ -29,6 +29,13 @@
       "when": 1784562129058,
       "tag": "0003_mature_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1784622818388,
+      "tag": "0004_fancy_red_wolf",
+      "breakpoints": true
     }
   ]
 }

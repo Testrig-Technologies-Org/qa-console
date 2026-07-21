@@ -1,6 +1,6 @@
 # qa-console-playwright-reporter
 
-A Playwright reporter that streams live test results to a [QA Console](../dashboard) dashboard as tests run — no waiting for the run to finish to see progress.
+A Playwright reporter that streams live test results to a QA Console dashboard as tests run — no waiting for the run to finish to see progress.
 
 ## Install
 
@@ -60,6 +60,28 @@ test("user can log in @TC-101", async ({ page }) => {
 ```
 
 Coverage stats on the dashboard are computed from these tags. Untagged tests report with case code `N/A`.
+
+## Live view
+
+While a test is running, the dashboard can show a live, low-fps view of the browser instead of just a "running" spinner — useful for headless CI runs where there's otherwise no way to see what a test is doing. This is entirely config-level — no test files to change, and no external binaries (no `ffmpeg`, nothing to install beyond `npm install`). Add two things to `playwright.config.ts`:
+
+```ts
+export default defineConfig({
+  globalSetup: require.resolve("qa-console-playwright-reporter/live-view-watcher"),
+  use: {
+    // Opens Chrome's own debugging port; the watcher polls it for screenshots. Pick any free
+    // port — override with QA_CONSOLE_LIVE_VIEW_PORT if 9223 conflicts with something in your CI.
+    launchOptions: { args: ["--remote-debugging-port=9223"] },
+  },
+  // ...
+});
+```
+
+The watcher polls that port every ~1s via Chrome's own DevTools protocol (`Page.captureScreenshot`) and forwards the JPEG to the dashboard — nothing but plain HTTP and WebSocket, so it behaves identically on any CI image that can run `npm install`.
+
+Requires **`workers: 1`.** Only one test runs at a time, so there's no ambiguity about which browser's debugging port is "the" live one. With more workers, the watcher logs a warning and does nothing (it never guesses and risks showing the wrong test) — but leaving `--remote-debugging-port` in `launchOptions` regardless is harmless: if two Chromium processes ever did race for that port, only one wins the bind and Chrome runs normally either way, it never fails the browser launch.
+
+It reads the same `QA_CONSOLE_URL` / `QA_CONSOLE_API_KEY` / `QA_CONSOLE_PROJECT_ID` (and `QA_CONSOLE_SESSION_ID`) environment variables the reporter's config already uses. Set `QA_CONSOLE_LIVE_VIEW=false` to disable it without removing the `globalSetup` line.
 
 ## Sharded / parallel CI
 

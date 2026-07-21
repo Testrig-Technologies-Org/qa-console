@@ -1,6 +1,6 @@
 {
   "name": "qa-console-playwright-reporter",
-  "version": "0.4.0",
+  "version": "0.5.1",
   "description": "Playwright reporter that streams live test results to a QA Console dashboard as tests run.",
   "license": "MIT",
   "type": "module",
@@ -12,6 +12,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./live-view-watcher": {
+      "types": "./dist/live-view-watcher.d.ts",
+      "import": "./dist/live-view-watcher.js",
+      "require": "./dist/live-view-watcher.cjs"
     }
   },
   "files": [
@@ -33,9 +38,13 @@
   "peerDependencies": {
     "@playwright/test": ">=1.40.0"
   },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/node": "^26.1.1",
+    "@types/ws": "^8.5.13",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
   },

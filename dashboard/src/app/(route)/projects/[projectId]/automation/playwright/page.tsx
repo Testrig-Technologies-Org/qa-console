@@ -8,6 +8,7 @@ import {
   getBuildDetails,
   getPlaywrightTrend,
   getTestSteps,
+  getLiveFrame,
   getProjectById
 } from "@/lib/actions";
 import {
@@ -158,7 +159,27 @@ function PlaywrightDashboardContent() {
   };
 
   const normalizedTests = useMemo(() => normalizePlaywrightResults(buildDetails?.results || []), [buildDetails]);
-  
+
+  // Live view: the CI watcher only runs with `workers: 1`, so a build has at most one RUNNING
+  // test at a time — one poll per build is enough, no per-test targeting needed. Kept as
+  // separate state (not merged into buildDetails) since it updates far more often than results.
+  const [liveFrame, setLiveFrame] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedBuildId || buildDetails?.status !== 'running') {
+      setLiveFrame(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      const data = await getLiveFrame(selectedBuildId);
+      if (!cancelled && data?.frame_base64) setLiveFrame(data.frame_base64);
+    };
+    poll();
+    const interval = setInterval(poll, 1200);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [selectedBuildId, buildDetails?.status]);
+
   const currentStats = useMemo(() => {
     const s = { total: 0, passed: 0, failed: 0, running: 0 };
     normalizedTests.forEach((t: any) => {
@@ -318,7 +339,7 @@ function PlaywrightDashboardContent() {
                       const uiId = t.unique_key || `${t.id}-${t.project}-${t.title}`;
                       return (
                         <div key={uiId} className="relative group hover:bg-muted/5 transition-colors">
-                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} />
+                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' ? liveFrame : null} />
                         </div>
                       );
                     })}

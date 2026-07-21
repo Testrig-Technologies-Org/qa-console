@@ -108,9 +108,9 @@ function StepItem({ step, depth }: { step: any; depth: number }) {
   );
 }
 
-export function TestRow({ test, isExpanded, onToggle, isLoadingLogs }: any) {
+export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame }: any) {
   const [stepsExpanded, setStepsExpanded] = React.useState(false);
-  
+
   const videoUrl = getVideoUrl(test);
   const screenshotUrl = getScreenshotUrl(test);
   const steps = getSteps(test);
@@ -194,6 +194,27 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs }: any) {
                     {steps.map((s: any, idx: number) => <StepItem key={idx} step={s} depth={0} />)}
                  </div>
                )}
+            </div>
+          )}
+
+          {/* Live View — screencast frames while the test is still running, replaced by the
+              recorded video below once it finishes */}
+          {test?.status === 'running' && (
+            <div className="ml-12 space-y-3 max-w-xl">
+              <div className="flex items-center gap-2 px-1 text-indigo-600 dark:text-indigo-400 font-black text-[10px] uppercase tracking-widest">
+                <Monitor size={16} className="animate-pulse" /> Live View
+              </div>
+              {liveFrame ? (
+                <img
+                  src={`data:image/jpeg;base64,${liveFrame}`}
+                  alt="Live test view"
+                  className="w-full rounded-3xl border border-border bg-black shadow-2xl aspect-video object-contain"
+                />
+              ) : (
+                <div className="w-full rounded-3xl border border-border bg-black shadow-2xl aspect-video flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                </div>
+              )}
             </div>
           )}
 

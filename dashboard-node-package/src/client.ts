@@ -18,6 +18,10 @@ export interface ReportResultParams {
   unique_test_key?: string;
 }
 
+export interface LiveFrameParams {
+  sessionId?: string;
+}
+
 export class QAConsoleClient {
   private readonly baseUrl: string;
   private readonly options: QAConsoleReporterOptions;
@@ -52,6 +56,21 @@ export class QAConsoleClient {
 
   async completeBuild(buildId: number, status: "passed" | "failed"): Promise<void> {
     await this.request("/api/automation/build", "PATCH", { build_id: buildId, status });
+  }
+
+  async postLiveFrame(params: LiveFrameParams & { frameBase64: string }): Promise<void> {
+    await this.post("/api/automation/live-frame", {
+      project_id: this.options.projectId,
+      session_id: params.sessionId,
+      frame_base64: params.frameBase64,
+    });
+  }
+
+  async deleteLiveFrame(params: LiveFrameParams): Promise<void> {
+    await this.request("/api/automation/live-frame", "DELETE", {
+      project_id: this.options.projectId,
+      session_id: params.sessionId,
+    });
   }
 
   async uploadFile(fileBuffer: Buffer, fileName: string, contentType: string): Promise<string> {

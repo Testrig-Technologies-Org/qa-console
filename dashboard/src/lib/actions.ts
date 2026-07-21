@@ -1,7 +1,7 @@
 "use server"
 
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { automationBuilds, generateProjectApiKey, organizationMembers, projects, testCases, testResults, users } from '../../db/schema';
+import { automationBuilds, automationLiveFrames, generateProjectApiKey, organizationMembers, projects, testCases, testResults, users } from '../../db/schema';
 import { revalidatePath } from "next/cache";
 import { db } from '../../db';
 import { auth } from '@clerk/nextjs/server';
@@ -550,6 +550,27 @@ export async function getTestSteps(specId: number, testTitle: string) {
     return null;
   }
 }
+/**
+ * Polled every ~1s by the dashboard while a build is RUNNING. One frame per build (the CI
+ * watcher only runs with `workers: 1`, so there's never more than one live test at a time) —
+ * the dashboard attaches it to whichever test row currently shows status RUNNING.
+ */
+export async function getLiveFrame(buildId: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return null;
+
+    const frame = await db.query.automationLiveFrames.findFirst({
+      where: eq(automationLiveFrames.buildId, buildId),
+    });
+
+    return frame ? { frame_base64: frame.frameData, updated_at: frame.updatedAt } : null;
+  } catch (error) {
+    console.error('Error fetching live frame:', error);
+    return null;
+  }
+}
+
 export async function getCypressTestSteps(specId: number, testTitle: string) {
   try {
     // 1. Query the testResults table using the specId (Primary Key)

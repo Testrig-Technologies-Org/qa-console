@@ -13,8 +13,11 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
  * and QA_CONSOLE_PROJECT_ID are set (see .env.example), so this project still runs
  * standalone without a dashboard configured.
  */
+const qaConsoleConfigured = !!(process.env.QA_CONSOLE_URL && process.env.QA_CONSOLE_API_KEY && process.env.QA_CONSOLE_PROJECT_ID);
+const LIVE_VIEW_PORT = process.env.QA_CONSOLE_LIVE_VIEW_PORT || '9223';
+
 const reporters: ReporterDescription[] = [['html'], ['list']];
-if (process.env.QA_CONSOLE_URL && process.env.QA_CONSOLE_API_KEY && process.env.QA_CONSOLE_PROJECT_ID) {
+if (qaConsoleConfigured) {
   reporters.push([
     'qa-console-playwright-reporter',
     {
@@ -41,6 +44,14 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: reporters,
+  /**
+   * Streams a live view of the currently-running test to the QA Console dashboard — no test
+   * file changes needed. Polls the Chromium debugging port opened below (`use.launchOptions`)
+   * for a screenshot every ~1s; no ffmpeg or other external binary involved. Requires
+   * `workers: 1` (already the case on CI, above); no-ops otherwise. Same opt-in condition as
+   * the reporter.
+   */
+  globalSetup: qaConsoleConfigured ? require.resolve('qa-console-playwright-reporter/live-view-watcher') : undefined,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
@@ -51,6 +62,11 @@ export default defineConfig({
 
     /* Record video for every test — uploaded to the QA Console dashboard when reporting. */
     video: 'on',
+
+    /* Opens a debugging port the live-view watcher above polls for screenshots. Safe even if
+       unused: Chrome falls back to running without the debug port active if the bind ever
+       fails, it never fails the browser launch itself. */
+    launchOptions: qaConsoleConfigured ? { args: [`--remote-debugging-port=${LIVE_VIEW_PORT}`] } : undefined,
   },
 
   /* Configure projects for major browsers */
