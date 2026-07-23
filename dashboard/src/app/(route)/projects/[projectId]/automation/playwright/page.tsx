@@ -448,7 +448,7 @@ function PlaywrightDashboardContent() {
                       const uiId = uiIdFor(t);
                       return (
                         <div key={uiId} className="relative group hover:bg-muted/5 transition-colors">
-                          <TestRow test={t} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key === uiId ? liveFrames[workerIdFor(t)] : null} isSuperseded={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key !== uiId} />
+                          <TestRow test={t} buildId={selectedBuildId} masterMap={masterMap} isExpanded={expandedTests.includes(uiId)} isLoadingLogs={loadingLogs === uiId} onToggle={() => toggleTestLogs(uiId, t.id, t.title)} liveFrame={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key === uiId ? liveFrames[workerIdFor(t)] : null} isSuperseded={t.status === 'running' && currentOccupantByWorker[workerIdFor(t)]?.key !== uiId} />
                         </div>
                       );
                     })}

@@ -7,6 +7,7 @@ import {
   Layers, ListTree, Monitor, SkipForward, AlertTriangle
 } from "lucide-react";
 import { LogTerminal } from "./LogTerminal";
+import { SimilarFailures } from "./SimilarFailures";
 import { cn } from "@/lib/utils";
 
 const formatDisplayLabel = (text: any): string => {
@@ -130,7 +131,7 @@ function StepItem({ step, depth }: { step: any; depth: number }) {
   );
 }
 
-export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame, isSuperseded }: any) {
+export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, liveFrame, isSuperseded }: any) {
   const [stepsExpanded, setStepsExpanded] = React.useState(false);
 
   const videoUrl = getVideoUrl(test);
@@ -308,6 +309,13 @@ export function TestRow({ test, isExpanded, onToggle, isLoadingLogs, liveFrame, 
                   </pre>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Run Intelligence — semantically similar past failures, sourced from TiDB vector search */}
+          {test?.status === 'failed' && buildId && test?.unique_key && (
+            <div className="ml-12">
+              <SimilarFailures buildId={buildId} uniqueKey={test.unique_key} />
             </div>
           )}
         </div>

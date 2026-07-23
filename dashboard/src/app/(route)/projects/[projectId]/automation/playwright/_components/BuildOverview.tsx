@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
     Server, Cpu, Activity, Terminal, Timer, Search,
     ChevronRight, FileCode, Clock, Filter,
-    TrendingDown, Shield, Zap, Bug, Layers, ListTree, StopCircle, Loader2
+    TrendingDown, Shield, Zap, Bug, Layers, ListTree, StopCircle, Loader2, GitCompare, Shuffle
 } from "lucide-react";
 import {
     BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,6 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
 import { BuildHistoryComparison } from "./BuildHistoryComparison";
+import { SimilarFailures } from "./SimilarFailures";
+import { FlakyTests } from "./FlakyTests";
 import { useTheme } from "next-themes";
 import { isBuildStale } from "@/lib/build-staleness";
 
@@ -133,6 +135,11 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
 
     const { stats, slowestTest, avgTime, projectCount } = analysis;
     const stabilityIndex = stats.total > 0 ? Math.round(((stats.passed + stats.flaky) / stats.total) * 100) : 0;
+    const pieData = [
+        { n: 'S', v: stats.passed, c: '#10b990' },
+        { n: 'F', v: stats.flaky, c: '#f59e0b' },
+        { n: 'E', v: stats.failed, c: '#e11d48' },
+    ].filter((x) => x.v > 0);
 
     return (
         <div className="space-y-6 transition-colors duration-300">
@@ -175,15 +182,10 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        data={[
-                                            { n: 'S', v: stats.passed, c: '#10b990' },
-                                            { n: 'F', v: stats.flaky, c: '#f59e0b' },
-                                            { n: 'E', v: stats.failed, c: '#e11d48' }
-                                        ].filter(x => x.v > 0)}
+                                        data={pieData}
                                         innerRadius={35} outerRadius={46} paddingAngle={4} dataKey="v" stroke="none"
                                     >
-                                        {//@ts-ignore
-                                            (entry: any, index: number) => <Cell key={index} fill={entry.c} />}
+                                        {pieData.map((entry, index) => <Cell key={index} fill={entry.c} />)}
                                     </Pie>
                                 </PieChart>
                             </ResponsiveContainer>
@@ -293,6 +295,39 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                     </div>
                 </div>
             </div>
+
+            {/* RUN INTELLIGENCE — flaky test radar: tests that needed a retry to pass, ranked across this project's recent build history */}
+            {buildData.projectId && (
+                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
+                    <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
+                        <Shuffle size={14} className="text-amber-500" />
+                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Flaky_Test_Radar</span>
+                    </div>
+                    <FlakyTests projectId={Number(buildData.projectId)} />
+                </div>
+            )}
+
+            {/* RUN INTELLIGENCE — semantically similar past failures per current failure, via TiDB vector search */}
+            {stats.failed > 0 && buildId && (
+                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
+                    <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
+                        <GitCompare size={14} className="text-indigo-500" />
+                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Failure_Correlation</span>
+                    </div>
+                    <div className="divide-y divide-border">
+                        {analysis.allTests
+                            .filter((t: any) => t.isF && t.unique_key)
+                            .map((t: any) => (
+                                <div key={t.unique_key} className="p-6 space-y-4">
+                                    <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500 text-xs font-bold uppercase tracking-tight">
+                                        <Bug size={14} className="shrink-0" /> <span className="truncate">{t.title}</span>
+                                    </div>
+                                    <SimilarFailures buildId={Number(buildId)} uniqueKey={t.unique_key} />
+                                </div>
+                            ))}
+                    </div>
+                </div>
+            )}
 
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <BuildHistoryComparison projectId={buildData.projectId}

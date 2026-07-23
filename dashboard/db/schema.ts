@@ -1,6 +1,20 @@
-import { mysqlTable, text, mediumtext, timestamp, int, json, varchar, uniqueIndex, index, primaryKey } from 'drizzle-orm/mysql-core';
+import { mysqlTable, text, mediumtext, timestamp, int, json, varchar, uniqueIndex, index, primaryKey, customType } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
+
+// TiDB's VECTOR type has no Drizzle built-in yet — map it manually. Stored/read as the
+// '[1,2,3]' string literal TiDB's VECTOR type itself uses on the wire.
+export const vector = customType<{ data: number[]; config: { length: number }; configRequired: true; driverData: string }>({
+  dataType(config) {
+    return `VECTOR(${config.length})`;
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value) as number[];
+  },
+});
 
 /* -------------------- CLERK INTEGRATION TABLES -------------------- */
 
@@ -140,6 +154,34 @@ export const automationLiveFrames = mysqlTable('automation_live_frames', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.buildId, table.workerId] }),
+}));
+
+// 9. TEST FAILURE EMBEDDINGS (Run Intelligence — "find similar past failures"). One row per
+// FAILED final test result, not per test_results row (which holds a whole spec file's tests as
+// JSON) — a row is written with embedding=NULL the moment the failure is reported, then filled
+// in asynchronously by a cron so CI reporting never blocks on an embedding API call.
+export const testFailureEmbeddings = mysqlTable('test_failure_embeddings', {
+  id: int('id').primaryKey().autoincrement(),
+  buildId: int('build_id').references(() => automationBuilds.id, { onDelete: 'cascade' }).notNull(),
+  testResultId: int('test_result_id').references(() => testResults.id, { onDelete: 'cascade' }).notNull(),
+  projectId: int('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  organizationId: varchar('organization_id', { length: 255 }).references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  uniqueKey: varchar('unique_key', { length: 512 }).notNull(), // matches tests[].unique_key inside test_results.tests
+  caseCode: varchar('case_code', { length: 100 }),
+  specFile: varchar('spec_file', { length: 512 }).notNull(),
+  title: text('title').notNull(),
+  // Normalized text actually embedded (title + cleaned error.message + top stack frame) — not
+  // full logs/stack, so semantically similar failures cluster together instead of drifting on noise.
+  signature: text('signature').notNull(),
+  // Null until the embed-failures cron fills it in. Recorded per row (not assumed globally) so a
+  // future provider/model swap can't silently mix incompatible vector spaces in similarity search.
+  embeddingModel: varchar('embedding_model', { length: 100 }),
+  embedding: vector('embedding', { length: 1536 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  buildIdx: index('tfe_build_idx').on(table.buildId),
+  orgIdx: index('tfe_org_idx').on(table.organizationId),
+  pendingIdx: index('tfe_pending_idx').on(table.embeddingModel),
 }));
 
 /* -------------------- RELATIONS -------------------- */

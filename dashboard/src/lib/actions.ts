@@ -1,7 +1,7 @@
 "use server"
 
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { automationBuilds, automationLiveFrames, generateProjectApiKey, organizationMembers, projects, testCases, testResults, users } from '../../db/schema';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { automationBuilds, automationLiveFrames, generateProjectApiKey, organizationMembers, projects, testCases, testFailureEmbeddings, testResults, users } from '../../db/schema';
 import { revalidatePath } from "next/cache";
 import { db } from '../../db';
 import { auth } from '@clerk/nextjs/server';
@@ -363,6 +363,139 @@ export async function stopBuild(buildId: number) {
   } catch (e: any) {
     console.error('❌ stopBuild error:', e.message);
     return { error: 'Failed to stop build' };
+  }
+}
+
+/** Permanently deletes a build. Cascades to its test_results and live-frame rows at the DB level. */
+export async function deleteBuild(buildId: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { error: 'No organization found' };
+
+    const build = await db.query.automationBuilds.findFirst({
+      where: and(eq(automationBuilds.id, buildId), eq(automationBuilds.organizationId, membership.organizationId)),
+    });
+    if (!build) return { error: 'Build not found' };
+
+    await db.delete(automationBuilds).where(eq(automationBuilds.id, buildId));
+
+    revalidatePath(`/projects/${build.projectId}/automation`);
+    return { success: true };
+  } catch (e: any) {
+    console.error('❌ deleteBuild error:', e.message);
+    return { error: 'Failed to delete build' };
+  }
+}
+
+/**
+ * Run Intelligence — "find similar past failures". Looks up the failure embedding recorded for
+ * (buildId, uniqueKey) and does a full-table cosine-distance scan against every other embedded
+ * failure in the caller's org (TiDB's VECTOR INDEX/HNSW isn't supported on this cluster yet — a
+ * plain ORDER BY scan is fine at per-org failure volumes). Always scoped by organizationId: a
+ * global scan would otherwise leak another tenant's error messages/stack traces into results.
+ */
+export async function getSimilarFailures(buildId: number, uniqueKey: string, limit = 5) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { error: 'No organization found' };
+
+    const current = await db.query.testFailureEmbeddings.findFirst({
+      where: and(
+        eq(testFailureEmbeddings.buildId, buildId),
+        eq(testFailureEmbeddings.uniqueKey, uniqueKey),
+        eq(testFailureEmbeddings.organizationId, membership.organizationId),
+      ),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
+    });
+
+    if (!current) return { success: true, indexed: false, similar: [] };
+    if (!current.embedding) return { success: true, indexed: false, pending: true, similar: [] };
+
+    const vectorLiteral = `[${current.embedding.join(',')}]`;
+    const result = await db.execute(sql`
+      SELECT id, build_id, unique_key, case_code, spec_file, title, created_at,
+             VEC_COSINE_DISTANCE(embedding, ${vectorLiteral}) AS distance
+      FROM test_failure_embeddings
+      WHERE organization_id = ${membership.organizationId}
+        AND id != ${current.id}
+        AND embedding IS NOT NULL
+      ORDER BY distance
+      LIMIT ${limit}
+    `);
+
+    return { success: true, indexed: true, current: { title: current.title, signature: current.signature }, similar: result.rows };
+  } catch (e: any) {
+    console.error('❌ getSimilarFailures error:', e.message);
+    return { error: 'Failed to fetch similar failures' };
+  }
+}
+
+const FLAKY_LOOKBACK_DAYS = 60;
+const FLAKY_ROW_SCAN_CAP = 500; // safety cap on test_results rows scanned per call
+
+/**
+ * Run Intelligence — flaky test radar. Aggregates the `is_flaky` flag the reporter already sets
+ * per test entry (true when a test needed a retry to eventually pass) across a project's recent
+ * build history, grouped by unique_key so the same logical test is tracked across builds/specs.
+ * Deliberately just this one direct signal for v1, not a broader status-flip-detection heuristic.
+ */
+export async function getFlakyTests(projectId: number, limit = 10) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { error: 'No organization found' };
+
+    const cutoff = new Date(Date.now() - FLAKY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await db.query.testResults.findMany({
+      where: and(
+        eq(testResults.projectId, projectId),
+        eq(testResults.organizationId, membership.organizationId),
+        gte(testResults.executedAt, cutoff),
+      ),
+      orderBy: (t, { desc }) => [desc(t.executedAt)],
+      limit: FLAKY_ROW_SCAN_CAP,
+    });
+
+    type Agg = { title: string; specFile: string; totalRuns: number; flakyRuns: number; lastSeen: Date };
+    const byTest = new Map<string, Agg>();
+
+    for (const row of rows) {
+      const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
+      for (const t of tests) {
+        if (!t.is_final) continue;
+        const key = t.unique_key || `${t.project || 'default'}::${t.title || 'unknown'}`;
+        const entry = byTest.get(key) ?? { title: t.title || 'Untitled test', specFile: row.specFile, totalRuns: 0, flakyRuns: 0, lastSeen: row.executedAt as Date };
+        entry.totalRuns++;
+        if (t.is_flaky) entry.flakyRuns++;
+        if (new Date(row.executedAt as Date) > new Date(entry.lastSeen)) entry.lastSeen = row.executedAt as Date;
+        byTest.set(key, entry);
+      }
+    }
+
+    const flaky = Array.from(byTest.values())
+      .filter((t) => t.flakyRuns > 0)
+      .sort((a, b) => (b.flakyRuns / b.totalRuns) - (a.flakyRuns / a.totalRuns) || b.flakyRuns - a.flakyRuns)
+      .slice(0, limit)
+      .map((t) => ({ ...t, flakeRate: Math.round((t.flakyRuns / t.totalRuns) * 100) }));
+
+    return { success: true, flaky };
+  } catch (e: any) {
+    console.error('❌ getFlakyTests error:', e.message);
+    return { error: 'Failed to fetch flaky tests' };
   }
 }
 

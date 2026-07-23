@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../../../../db';
-import { testResults } from '../../../../../db/schema';
+import { testFailureEmbeddings, testResults } from '../../../../../db/schema';
 import { getBuildIfKeyValid, getProjectIfKeyValid } from '../../../../lib/automation-auth';
 import { withDuplicateKeyRetry } from '../../../../lib/automation-concurrency';
 
@@ -212,18 +212,45 @@ export async function POST(req: Request) {
         });
 
         // Save to database
+        let testResultId: number;
         if (existing) {
           await tx
             .update(testResults)
             .set({ tests: tests as any })
             .where(and(eq(testResults.buildId, build_id), eq(testResults.specFile, spec_file)));
+          testResultId = existing.id;
         } else {
-          await tx.insert(testResults).values({
+          const insertRes = await tx.insert(testResults).values({
             buildId: build_id as any,
             projectId: build.projectId,
             organizationId: build.organizationId,
             specFile: spec_file,
             tests: tests as any,
+          });
+          testResultId = (insertRes as any).lastInsertId ?? (insertRes as any)[0]?.insertId;
+        }
+
+        // Run Intelligence — queue this failure for embedding. Written with embedding=NULL here
+        // (cheap, synchronous) and filled in later by the embed-failures cron, so CI reporting
+        // never blocks on an embedding API call.
+        if (isFinal && testIdx !== -1 && tests[testIdx].status === 'FAILED') {
+          const finalEntry = tests[testIdx];
+          const signature = [
+            finalEntry.title,
+            finalEntry.error?.message,
+            finalEntry.error?.location ? `${finalEntry.error.location.file}:${finalEntry.error.location.line}` : undefined,
+          ].filter(Boolean).join('\n');
+
+          await tx.insert(testFailureEmbeddings).values({
+            buildId: build_id,
+            testResultId,
+            projectId: build.projectId,
+            organizationId: build.organizationId,
+            uniqueKey: testUniqueKey,
+            caseCode: finalEntry.case_codes?.[0] !== 'N/A' ? finalEntry.case_codes?.[0] : undefined,
+            specFile: spec_file,
+            title: finalEntry.title ?? 'Untitled test',
+            signature,
           });
         }
 
