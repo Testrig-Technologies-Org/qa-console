@@ -7,6 +7,7 @@ import { extractCaseCodes, mapStatus, normalizeStdio, summarizeSteps, toSpecFile
 export class QAConsoleReporter implements Reporter {
   private readonly client: QAConsoleClient;
   private readonly environment: string;
+  private readonly sessionId: string | undefined;
   private buildId: number | null = null;
   private disabled = false;
   private readonly pending: Promise<void>[] = [];
@@ -22,6 +23,9 @@ export class QAConsoleReporter implements Reporter {
     if (!options?.projectId) throw new Error('[qa-console-reporter] "projectId" is required');
 
     this.environment = options.environment ?? "dev";
+    // options.sessionId wins when both are set, since it's explicit per-reporter config;
+    // the env var is the documented fallback for CI setups that only export it once.
+    this.sessionId = options.sessionId ?? process.env.QA_CONSOLE_SESSION_ID;
     this.client = new QAConsoleClient(options);
     this.buildReady = new Promise((resolve) => {
       this.resolveBuildReady = resolve;
@@ -30,8 +34,7 @@ export class QAConsoleReporter implements Reporter {
 
   async onBegin(_config: FullConfig, _suite: Suite): Promise<void> {
     try {
-      const sessionId = process.env.QA_CONSOLE_SESSION_ID;
-      const { buildId } = await this.client.createBuild({ environment: this.environment, sessionId });
+      const { buildId } = await this.client.createBuild({ environment: this.environment, sessionId: this.sessionId });
       this.buildId = buildId;
       console.log(`[qa-console-reporter] Reporting live to QA Console — build #${buildId}`);
     } catch (error) {
