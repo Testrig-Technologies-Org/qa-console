@@ -4,11 +4,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Bot, Loader2, Send, Sparkles, User, Wrench } from "lucide-react";
 import { askIntelligence } from "@/lib/chat";
 import { cn } from "@/lib/utils";
+import { ChatChart } from "./ChatChart";
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
-  toolCalls?: { name: string; args: Record<string, any> }[];
+  toolCalls?: { name: string; args: Record<string, any>; result?: any }[];
   error?: boolean;
 }
 
@@ -16,6 +17,7 @@ const SUGGESTIONS = [
   "What's the pass rate for this project over the last 7 days?",
   "What are the most flaky tests here?",
   "What's currently failing?",
+  "Chart the pass rate trend over the last 30 days",
 ];
 
 export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string }) {
@@ -86,7 +88,7 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
             )}>
               {m.role === 'user' ? <User size={13} /> : <Bot size={13} />}
             </div>
-            <div className={cn("max-w-[80%] space-y-1.5", m.role === 'user' && "items-end flex flex-col")}>
+            <div className={cn("max-w-[80%] w-full space-y-1.5", m.role === 'user' ? "items-end flex flex-col" : "")}>
               <div className={cn(
                 "px-4 py-2.5 text-xs leading-relaxed whitespace-pre-wrap",
                 m.role === 'user'
@@ -106,6 +108,7 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
                   ))}
                 </div>
               )}
+              {m.toolCalls?.map((tc, j) => <ChatChart key={j} name={tc.name} result={tc.result} />)}
             </div>
           </div>
         ))}

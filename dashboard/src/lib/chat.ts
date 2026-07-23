@@ -17,7 +17,10 @@ Rules:
 - If a tool returns an error or empty data, say so plainly instead of guessing.
 - If a project name the user mentions doesn't resolve, call list_projects and suggest close matches.
 - Keep answers concise and concrete — lead with the number/fact, minimal preamble.
-- Data is already scoped to the caller's organization; never ask the user to confirm identity or access.`;
+- Data is already scoped to the caller's organization; never ask the user to confirm identity or access.
+- For requests to visualize, chart, graph, or show a trend, call get_pass_rate_trend or get_failure_breakdown
+  as appropriate. The dashboard renders that tool's data as an actual chart automatically, so once you have
+  the result, reply with just a short one-sentence caption — don't describe the data point-by-point in prose.`;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -27,6 +30,7 @@ interface ChatMessage {
 interface ToolCallRecord {
   name: string;
   args: Record<string, any>;
+  result: any;
 }
 
 async function callGemini(contents: any[]): Promise<any> {
@@ -39,6 +43,7 @@ async function callGemini(contents: any[]): Promise<any> {
       systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
     }),
   });
+  if (res.status === 429) throw new Error('RATE_LIMITED');
   if (!res.ok) throw new Error(`Gemini request failed (${res.status}): ${await res.text()}`);
   return res.json();
 }
@@ -83,8 +88,8 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
       const functionResponseParts = [];
       for (const p of functionCallParts) {
         const { name, args } = p.functionCall;
-        toolCalls.push({ name, args });
         const result = await executeTool(name, args || {}, membership.organizationId);
+        toolCalls.push({ name, args, result });
         functionResponseParts.push({ functionResponse: { name, response: result } });
       }
       contents.push({ role: 'user', parts: functionResponseParts });
@@ -92,6 +97,9 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
 
     return { success: true, text: "That took more steps than I'm allowed — try narrowing the question.", toolCalls };
   } catch (e: any) {
+    if (e.message === 'RATE_LIMITED') {
+      return { success: false, error: "Hit the LLM provider's rate limit — try again in a bit." };
+    }
     console.error('❌ askIntelligence error:', e.message);
     return { success: false, error: e.message || 'Failed to get an answer' };
   }

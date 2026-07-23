@@ -172,6 +172,73 @@ async function getFlakyTestsSummary({ organizationId, project_name, limit }: { o
   return { project: project.name, flakyTests: flaky };
 }
 
+async function getPassRateTrend({ organizationId, project_name, days }: { organizationId: string; project_name?: string; days?: number }) {
+  const project = await resolveProject(organizationId, project_name);
+  if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
+
+  const windowDays = Math.min(days || DEFAULT_STATS_DAYS, 90);
+  const cutoff = cutoffDate(windowDays);
+  const rows = await db.query.testResults.findMany({
+    where: and(
+      eq(testResults.organizationId, organizationId),
+      ...(project ? [eq(testResults.projectId, project.id)] : []),
+      gte(testResults.executedAt, cutoff),
+    ),
+    columns: { tests: true, executedAt: true },
+    limit: 2000,
+  });
+
+  const byDay = new Map<string, { total: number; passed: number }>();
+  for (const row of rows) {
+    const day = new Date(row.executedAt as Date).toISOString().slice(0, 10);
+    const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
+    for (const t of tests) {
+      if (!t.is_final) continue;
+      const entry = byDay.get(day) ?? { total: 0, passed: 0 };
+      entry.total++;
+      if (t.status === 'PASSED') entry.passed++;
+      byDay.set(day, entry);
+    }
+  }
+
+  const series = Array.from(byDay.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, s]) => ({ date, total: s.total, passed: s.passed, passRate: Math.round((s.passed / s.total) * 1000) / 10 }));
+
+  return { scope: project ? project.name : 'all projects in organization', windowDays, series };
+}
+
+async function getFailureBreakdown({ organizationId, project_name, days }: { organizationId: string; project_name?: string; days?: number }) {
+  const project = await resolveProject(organizationId, project_name);
+  if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
+
+  const windowDays = days || DEFAULT_FAILURES_DAYS;
+  const cutoff = cutoffDate(windowDays);
+  const rows = await db.query.testResults.findMany({
+    where: and(
+      eq(testResults.organizationId, organizationId),
+      ...(project ? [eq(testResults.projectId, project.id)] : []),
+      gte(testResults.executedAt, cutoff),
+    ),
+    columns: { tests: true, specFile: true },
+    limit: 1000,
+  });
+
+  const bySpec = new Map<string, number>();
+  for (const row of rows) {
+    const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
+    const failures = tests.filter((t: any) => t.is_final && t.status === 'FAILED').length;
+    if (failures > 0) bySpec.set(row.specFile, (bySpec.get(row.specFile) || 0) + failures);
+  }
+
+  const breakdown = Array.from(bySpec.entries())
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([specFile, failures]) => ({ specFile, failures }));
+
+  return { scope: project ? project.name : 'all projects in organization', windowDays, breakdown };
+}
+
 /* -------------------- DISPATCH + DECLARATIONS -------------------- */
 
 type ToolFn = (args: any) => Promise<any>;
@@ -183,6 +250,8 @@ const TOOL_IMPLS: Record<string, ToolFn> = {
   get_build_summary: getBuildSummary,
   get_failing_tests: getFailingTests,
   get_flaky_tests_summary: getFlakyTestsSummary,
+  get_pass_rate_trend: getPassRateTrend,
+  get_failure_breakdown: getFailureBreakdown,
 };
 
 /** Executes a tool by name, always injecting the caller's real organizationId — args from the model can never override it. */
@@ -256,6 +325,28 @@ export const TOOL_DECLARATIONS = [
         limit: { type: 'NUMBER', description: 'Max tests to return, default 10, max 20' },
       },
       required: ['project_name'],
+    },
+  },
+  {
+    name: 'get_pass_rate_trend',
+    description: 'Get a day-by-day pass rate trend series, for charting how a project (or the whole org) is trending over time.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects)' },
+        days: { type: 'NUMBER', description: 'Lookback window in days, default 30, max 90' },
+      },
+    },
+  },
+  {
+    name: 'get_failure_breakdown',
+    description: 'Get failure counts grouped by spec file, for charting which files/areas are failing most.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects)' },
+        days: { type: 'NUMBER', description: 'Lookback window in days, default 7' },
+      },
     },
   },
 ];
