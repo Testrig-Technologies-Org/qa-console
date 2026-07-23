@@ -184,6 +184,38 @@ export const testFailureEmbeddings = mysqlTable('test_failure_embeddings', {
   pendingIdx: index('tfe_pending_idx').on(table.embeddingModel),
 }));
 
+// 10. CHAT FEEDBACK (Run Intelligence — thumbs up/down on assistant answers). Recent negative
+// feedback is pulled back into the chat system prompt as "known issues to avoid" — the loop that
+// makes this "feedback", not just collection.
+export const chatFeedback = mysqlTable('chat_feedback', {
+  id: int('id').primaryKey().autoincrement(),
+  organizationId: varchar('organization_id', { length: 255 }).references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id),
+  question: text('question').notNull(),
+  answer: text('answer').notNull(),
+  rating: varchar('rating', { length: 10 }).notNull(), // 'up' | 'down'
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index('chat_feedback_org_idx').on(table.organizationId),
+}));
+
+// 11. LLM USAGE (Run Intelligence — token usage/cost tracking for the chat's Gemini calls).
+export const llmUsage = mysqlTable('llm_usage', {
+  id: int('id').primaryKey().autoincrement(),
+  organizationId: varchar('organization_id', { length: 255 }).references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id),
+  model: varchar('model', { length: 100 }).notNull(),
+  purpose: varchar('purpose', { length: 50 }).default('chat').notNull(),
+  promptTokens: int('prompt_tokens').default(0).notNull(),
+  candidateTokens: int('candidate_tokens').default(0).notNull(),
+  totalTokens: int('total_tokens').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index('llm_usage_org_idx').on(table.organizationId),
+  createdIdx: index('llm_usage_created_idx').on(table.createdAt),
+}));
+
 /* -------------------- RELATIONS -------------------- */
 
 // Users Relations

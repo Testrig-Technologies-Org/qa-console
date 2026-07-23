@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Send, Sparkles, User, Wrench } from "lucide-react";
-import { askIntelligence } from "@/lib/chat";
+import { Bot, Coins, Loader2, Send, Sparkles, ThumbsDown, ThumbsUp, User, Wrench } from "lucide-react";
+import { askIntelligence, getTokenUsageStats, submitChatFeedback } from "@/lib/chat";
 import { cn } from "@/lib/utils";
 import { ChatChart } from "./ChatChart";
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
+  question?: string; // the user question this assistant message answered, needed for feedback
   toolCalls?: { name: string; args: Record<string, any>; result?: any }[];
   error?: boolean;
+  feedback?: 'up' | 'down';
 }
 
 const SUGGESTIONS = [
@@ -24,11 +26,20 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usage, setUsage] = useState<{ totalTokens: number; requests: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  const refreshUsage = () => {
+    getTokenUsageStats(7).then((res) => {
+      if (res.success) setUsage({ totalTokens: res.totalTokens ?? 0, requests: res.requests ?? 0 });
+    });
+  };
+
+  useEffect(() => { refreshUsage(); }, []);
 
   const send = async (question: string) => {
     const trimmed = question.trim();
@@ -42,7 +53,7 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
     try {
       const res = await askIntelligence(trimmed, history);
       if (res.success) {
-        setMessages((prev) => [...prev, { role: 'assistant', text: res.text || '', toolCalls: res.toolCalls }]);
+        setMessages((prev) => [...prev, { role: 'assistant', text: res.text || '', question: trimmed, toolCalls: res.toolCalls }]);
       } else {
         setMessages((prev) => [...prev, { role: 'assistant', text: res.error || 'Something went wrong.', error: true }]);
       }
@@ -50,14 +61,35 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
       setMessages((prev) => [...prev, { role: 'assistant', text: 'Failed to reach the assistant.', error: true }]);
     } finally {
       setLoading(false);
+      refreshUsage();
     }
+  };
+
+  const rate = async (index: number, rating: 'up' | 'down') => {
+    const msg = messages[index];
+    if (!msg.question || msg.feedback) return;
+
+    let comment: string | undefined;
+    if (rating === 'down') {
+      comment = window.prompt("What was wrong with this answer? (optional)") || undefined;
+    }
+
+    setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, feedback: rating } : m)));
+    await submitChatFeedback(msg.question, msg.text, rating, comment);
   };
 
   return (
     <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden flex flex-col">
-      <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
-        <Sparkles size={14} className="text-indigo-500" />
-        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Ask_Intelligence</span>
+      <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Sparkles size={14} className="text-indigo-500" />
+          <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Ask_Intelligence</span>
+        </div>
+        {usage && usage.requests > 0 && (
+          <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted uppercase tracking-widest" title="LLM token usage, last 7 days">
+            <Coins size={11} className="opacity-60" /> {usage.totalTokens.toLocaleString()} tokens · 7d
+          </span>
+        )}
       </div>
 
       <div ref={scrollRef} className="max-h-[420px] min-h-[160px] overflow-y-auto p-6 space-y-4">
@@ -109,6 +141,32 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
                 </div>
               )}
               {m.toolCalls?.map((tc, j) => <ChatChart key={j} name={tc.name} result={tc.result} />)}
+              {m.role === 'assistant' && !m.error && m.question && (
+                <div className="flex items-center gap-1.5 px-1">
+                  <button
+                    onClick={() => rate(i, 'up')}
+                    disabled={!!m.feedback}
+                    title="Good answer"
+                    className={cn(
+                      "p-1 rounded transition-colors disabled:cursor-default",
+                      m.feedback === 'up' ? "text-emerald-500" : "text-muted/50 hover:text-emerald-500 disabled:hover:text-muted/50"
+                    )}
+                  >
+                    <ThumbsUp size={11} />
+                  </button>
+                  <button
+                    onClick={() => rate(i, 'down')}
+                    disabled={!!m.feedback}
+                    title="Bad answer"
+                    className={cn(
+                      "p-1 rounded transition-colors disabled:cursor-default",
+                      m.feedback === 'down' ? "text-rose-500" : "text-muted/50 hover:text-rose-500 disabled:hover:text-muted/50"
+                    )}
+                  >
+                    <ThumbsDown size={11} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
