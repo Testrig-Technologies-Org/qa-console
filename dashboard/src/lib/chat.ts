@@ -12,7 +12,15 @@ const MAX_RETRIES_PER_CALL = 1; // one retry on a transient 429 — does nothing
 const RETRY_DELAY_MS = 3000;
 const RECENT_FEEDBACK_LIMIT = 5;
 const GEMINI_FETCH_TIMEOUT_MS = 20000; // fetch() has no default timeout — without this, a stalled connection hangs the chat forever
+const TOOL_EXECUTION_TIMEOUT_MS = 15000; // TiDB Serverless connections can stall with no error, just silence — a DB call needs the same timeout treatment as the Gemini fetch above, or the whole turn hangs with no way out
 const OVERALL_BUDGET_MS = 60000; // hard ceiling across all rounds, so a slow-but-not-quite-timing-out pattern can't add up to an effectively infinite wait
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`TIMED_OUT_${label}`)), ms)),
+  ]);
+}
 
 const BASE_SYSTEM_INSTRUCTION = `You are the Run Intelligence assistant inside a QA test-automation dashboard.
 You answer questions about a single organization's test runs, builds, and failures.
@@ -102,11 +110,22 @@ async function callGemini(contents: any[], systemInstruction: string, organizati
 }
 
 async function buildSystemInstruction(organizationId: string): Promise<string> {
-  const recentNegative = await db.query.chatFeedback.findMany({
-    where: and(eq(chatFeedback.organizationId, organizationId), eq(chatFeedback.rating, 'down')),
-    orderBy: (f, { desc }) => [desc(f.createdAt)],
-    limit: RECENT_FEEDBACK_LIMIT,
-  });
+  // Best-effort — the feedback-hints lookup is a nice-to-have, not something that should be able
+  // to hang or break the whole chat if the DB stalls.
+  let recentNegative: { question: string; comment: string | null }[] = [];
+  try {
+    recentNegative = await withTimeout(
+      db.query.chatFeedback.findMany({
+        where: and(eq(chatFeedback.organizationId, organizationId), eq(chatFeedback.rating, 'down')),
+        orderBy: (f, { desc }) => [desc(f.createdAt)],
+        limit: RECENT_FEEDBACK_LIMIT,
+      }),
+      TOOL_EXECUTION_TIMEOUT_MS,
+      'chat_feedback_lookup',
+    );
+  } catch (e: any) {
+    console.error('buildSystemInstruction: feedback lookup failed/timed out:', e.message);
+  }
 
   if (recentNegative.length === 0) return BASE_SYSTEM_INSTRUCTION;
 
@@ -130,9 +149,11 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
     const { userId } = await auth();
     if (!userId) return { success: false, error: 'Unauthorized' };
 
-    const membership = await db.query.organizationMembers.findFirst({
-      where: eq(organizationMembers.userId, userId),
-    });
+    const membership = await withTimeout(
+      db.query.organizationMembers.findFirst({ where: eq(organizationMembers.userId, userId) }),
+      TOOL_EXECUTION_TIMEOUT_MS,
+      'membership_lookup',
+    );
     if (!membership) return { success: false, error: 'No organization found' };
 
     const systemInstruction = await buildSystemInstruction(membership.organizationId);
@@ -161,7 +182,15 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
       const functionResponseParts = [];
       for (const p of functionCallParts) {
         const { name, args } = p.functionCall;
-        const result = await executeTool(name, args || {}, membership.organizationId);
+        let result: any;
+        try {
+          result = await withTimeout(executeTool(name, args || {}, membership.organizationId), TOOL_EXECUTION_TIMEOUT_MS, name);
+        } catch {
+          // A stalled DB call shouldn't hang the whole turn — surface it as a tool error so the
+          // model (and system prompt's "say so plainly" rule) can tell the user this one query
+          // failed, instead of the chat just sitting on "Thinking..." forever.
+          result = { error: 'This query timed out — the database may be slow right now. Try again in a moment.' };
+        }
         toolCalls.push({ name, args, result });
         functionResponseParts.push({ functionResponse: { name, response: result } });
       }
@@ -173,7 +202,7 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
     if (e.message === 'RATE_LIMITED') {
       return { success: false, error: "Hit the LLM provider's rate limit — try again in a bit." };
     }
-    if (e.message === 'TIMED_OUT') {
+    if (e.message === 'TIMED_OUT' || e.message?.startsWith('TIMED_OUT_')) {
       return { success: false, error: 'That took too long and timed out — try again, or narrow the question.' };
     }
     console.error('❌ askIntelligence error:', e.message);
@@ -311,13 +340,19 @@ export async function getPinnedCharts(projectId: number) {
     });
 
     const charts = await Promise.all(
-      pins.map(async (pin) => ({
-        id: pin.id,
-        title: pin.title,
-        name: pin.toolName,
-        args: pin.args as Record<string, any>,
-        result: await executeTool(pin.toolName, pin.args as Record<string, any>, membership.organizationId),
-      })),
+      pins.map(async (pin) => {
+        let result: any;
+        try {
+          result = await withTimeout(
+            executeTool(pin.toolName, pin.args as Record<string, any>, membership.organizationId),
+            TOOL_EXECUTION_TIMEOUT_MS,
+            pin.toolName,
+          );
+        } catch {
+          result = { error: 'This chart timed out refreshing — the database may be slow right now.' };
+        }
+        return { id: pin.id, title: pin.title, name: pin.toolName, args: pin.args as Record<string, any>, result };
+      }),
     );
 
     return { success: true as const, charts };

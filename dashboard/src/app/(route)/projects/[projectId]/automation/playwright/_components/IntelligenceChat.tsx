@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
-import { Bot, Coins, Loader2, Send, Sparkles, ThumbsDown, ThumbsUp, User, Wrench } from "lucide-react";
+import { Bot, Coins, Loader2, Send, Sparkles, Square, ThumbsDown, ThumbsUp, User, Wrench } from "lucide-react";
 import { askIntelligence, getTokenUsageStats, submitChatFeedback } from "@/lib/chat";
 import { cn } from "@/lib/utils";
 import { ChatChart } from "./ChatChart";
@@ -35,6 +35,12 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
   const [loading, setLoading] = useState(false);
   const [usage, setUsage] = useState<{ totalTokens: number; requests: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // askIntelligence runs as a server action — there's no signal to actually cancel the in-flight
+  // Gemini/DB call server-side. Stop instead abandons the client's wait immediately (unblocks the
+  // UI right away) and this ref lets the eventual real response get silently discarded rather than
+  // popping into the chat after the user already gave up on it.
+  const requestIdRef = useRef(0);
+  const stopResolverRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -52,24 +58,46 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
     const trimmed = question.trim();
     if (!trimmed || loading) return;
 
+    const myRequestId = ++requestIdRef.current;
     const history = messages.map((m) => ({ role: m.role, text: m.text }));
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setLoading(true);
 
+    const stopped = new Promise<'stopped'>((resolve) => {
+      stopResolverRef.current = () => resolve('stopped');
+    });
+
     try {
-      const res = await askIntelligence(trimmed, history);
-      if (res.success) {
-        setMessages((prev) => [...prev, { role: 'assistant', text: res.text || '', question: trimmed, toolCalls: res.toolCalls }]);
+      const outcome = await Promise.race([
+        askIntelligence(trimmed, history).then((res) => ({ kind: 'response' as const, res })),
+        stopped.then((kind) => ({ kind })),
+      ]);
+
+      // A newer question (or another Stop) has already superseded this one — don't append a
+      // late-arriving response into the middle of a conversation that's moved on.
+      if (requestIdRef.current !== myRequestId) return;
+
+      if (outcome.kind === 'stopped') {
+        setMessages((prev) => [...prev, { role: 'assistant', text: 'Stopped.', error: true }]);
+      } else if (outcome.res.success) {
+        setMessages((prev) => [...prev, { role: 'assistant', text: outcome.res.text || '', question: trimmed, toolCalls: outcome.res.toolCalls }]);
       } else {
-        setMessages((prev) => [...prev, { role: 'assistant', text: res.error || 'Something went wrong.', error: true }]);
+        setMessages((prev) => [...prev, { role: 'assistant', text: outcome.res.error || 'Something went wrong.', error: true }]);
       }
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', text: 'Failed to reach the assistant.', error: true }]);
+      if (requestIdRef.current === myRequestId) {
+        setMessages((prev) => [...prev, { role: 'assistant', text: 'Failed to reach the assistant.', error: true }]);
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === myRequestId) setLoading(false);
+      stopResolverRef.current = null;
       refreshUsage();
     }
+  };
+
+  const handleStop = () => {
+    stopResolverRef.current?.();
   };
 
   const rate = async (index: number, rating: 'up' | 'down') => {
@@ -191,15 +219,21 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
             <div className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full border bg-indigo-500/10 text-indigo-500 border-indigo-500/20">
               <Bot size={13} />
             </div>
-            <div className="px-4 py-2.5 bg-card border border-border rounded-2xl rounded-tl-sm flex items-center gap-2 text-muted text-xs">
-              <Loader2 size={12} className="animate-spin" /> Thinking...
+            <div className="px-4 py-2.5 bg-card border border-border rounded-2xl rounded-tl-sm flex items-center gap-3 text-muted text-xs">
+              <span className="flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Thinking...</span>
+              <button
+                onClick={handleStop}
+                className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-400 transition-colors"
+              >
+                <Square size={9} fill="currentColor" /> Stop
+              </button>
             </div>
           </div>
         )}
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); send(input); }}
+        onSubmit={(e) => { e.preventDefault(); if (!loading) send(input); }}
         className="border-t border-border p-3 flex items-center gap-2"
       >
         <input
@@ -209,13 +243,24 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
           disabled={loading}
           className="flex-1 bg-background border border-border px-3 py-2.5 text-xs text-foreground outline-none focus:border-indigo-500 transition-all placeholder:text-muted/40 disabled:opacity-50"
         />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          className="p-2.5 bg-foreground text-background border border-foreground disabled:opacity-40 hover:opacity-90 transition-all"
-        >
-          <Send size={14} />
-        </button>
+        {loading ? (
+          <button
+            type="button"
+            onClick={handleStop}
+            title="Stop"
+            className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/30 hover:bg-rose-500/20 transition-all"
+          >
+            <Square size={14} fill="currentColor" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="p-2.5 bg-foreground text-background border border-foreground disabled:opacity-40 hover:opacity-90 transition-all"
+          >
+            <Send size={14} />
+          </button>
+        )}
       </form>
     </div>
   );
