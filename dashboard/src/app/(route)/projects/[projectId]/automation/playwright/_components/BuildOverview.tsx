@@ -15,6 +15,7 @@ import { StatusBadge } from "./StatusBadge";
 import { BuildHistoryComparison } from "./BuildHistoryComparison";
 import { SimilarFailures } from "./SimilarFailures";
 import { FlakyTests } from "./FlakyTests";
+import { IntelligenceChat } from "./IntelligenceChat";
 import { useTheme } from "next-themes";
 import { isBuildStale } from "@/lib/build-staleness";
 
@@ -295,6 +296,9 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                     </div>
                 </div>
             </div>
+
+            {/* RUN INTELLIGENCE — natural-language Q&A over this org's test/build data, via Gemini function-calling over the safe query helpers in chat-tools.ts */}
+            <IntelligenceChat />
 
             {/* RUN INTELLIGENCE — flaky test radar: tests that needed a retry to pass, ranked across this project's recent build history */}
             {buildData.projectId && (
