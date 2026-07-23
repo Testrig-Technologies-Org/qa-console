@@ -2,8 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getBuildsByProjectAndType, getProjectById } from "@/lib/actions";
-import { Loader2, Activity, Calendar, Box, ChevronRight, Clock, Shield, Server } from "lucide-react";
+import { Loader2, Activity, Calendar, Box, ChevronRight, Clock, GitMerge, Shield, Server } from "lucide-react";
 import { StatusBadge } from "@/app/(route)/projects/[projectId]/automation/cypress/_components/StatusBadge";
+import { CreateBuildModal } from "@/app/(route)/projects/[projectId]/automation/_components/CreateBuildModal";
 import { cn } from "@/lib/utils";
 
 export default function ProjectAutomationPage() {
@@ -12,32 +13,34 @@ export default function ProjectAutomationPage() {
   const [builds, setBuilds] = useState<any[]>([]);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const proj = await getProjectById(Number(projectId));
+
+      if (proj && !('error' in proj)) {
+        setProject(proj);
+        const bld = await getBuildsByProjectAndType(Number(projectId), proj.type);
+
+        if (Array.isArray(bld)) {
+          setBuilds(bld);
+        } else {
+          console.error("Fetch builds error:", bld.error);
+          setBuilds([]);
+        }
+      }
+    } catch (error) {
+      console.error("Critical Registry Fetch Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const proj = await getProjectById(Number(projectId));
-        
-        if (proj && !('error' in proj)) {
-          setProject(proj);
-          const bld = await getBuildsByProjectAndType(Number(projectId), proj.type);
-
-          if (Array.isArray(bld)) {
-            setBuilds(bld);
-          } else {
-            console.error("Fetch builds error:", bld.error);
-            setBuilds([]);
-          }
-        }
-      } catch (error) {
-        console.error("Critical Registry Fetch Error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (projectId) fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   if (loading) return (
@@ -70,8 +73,17 @@ export default function ProjectAutomationPage() {
                   TYPE: <span className="text-indigo-500">{project?.type}</span> • UUID: {projectId}
                 </p>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-bold text-muted uppercase border border-border px-3 py-1 bg-card/50">
-                Pipeline: <span className="text-emerald-500 ml-1">STABLE_CHANNEL</span>
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 text-[10px] font-bold text-muted uppercase border border-border px-3 py-1 bg-card/50">
+                    Pipeline: <span className="text-emerald-500 ml-1">STABLE_CHANNEL</span>
+                </div>
+                <button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                >
+                  <GitMerge size={13} />
+                  Create_Build
+                </button>
             </div>
         </div>
       </header>
@@ -148,6 +160,13 @@ export default function ProjectAutomationPage() {
         <p className="text-[9px] text-muted font-bold uppercase tracking-widest underline">Auth_Node: Secure</p>
         <p className="text-[9px] text-muted font-mono">Registry_Sync: Last_Check_Now</p>
       </footer>
+
+      <CreateBuildModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        projectId={Number(projectId)}
+        onCreated={fetchData}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from '../../db';
 import { auth } from '@clerk/nextjs/server';
 import { isBuildStale } from './build-staleness';
+import { randomBytes } from 'crypto';
 
 
 // this is fixed 
@@ -929,6 +930,49 @@ export async function regenerateProjectApiKey(projectId: number) {
   } catch (error: any) {
     console.error('API Key Regeneration Error:', error);
     return { success: false, error: error.message || 'Failed to regenerate API key' };
+  }
+}
+
+/**
+ * Pre-creates a "combined" build and hands back its session key. Pasting that key as
+ * QA_CONSOLE_SESSION_ID (or the reporter's `sessionId` option) before running CI makes every
+ * shard/worker in that run resolve to this same build via the (project_id, session_id) lookup
+ * in POST /api/automation/build, instead of each one creating its own separate build.
+ */
+export async function createManualBuild(projectId: number, environment?: string) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: 'Unauthorized' };
+
+    const project = await db.query.projects.findFirst({ where: eq(projects.id, projectId) });
+    if (!project) return { success: false, error: 'Project not found' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership || membership.organizationId !== project.organizationId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const sessionId = `qac_build_${randomBytes(12).toString('hex')}`;
+
+    const res = await db.insert(automationBuilds).values({
+      projectId,
+      organizationId: project.organizationId,
+      sessionId,
+      environment: environment?.toLowerCase() || project.environment || 'dev',
+      status: 'running',
+      type: project.type,
+    });
+
+    const insertedId = (res as any).lastInsertId || (res as any)[0]?.insertId;
+
+    revalidatePath(`/projects/${projectId}/automation`);
+
+    return { success: true, buildId: insertedId, sessionId };
+  } catch (error: any) {
+    console.error('Manual Build Creation Error:', error);
+    return { success: false, error: error.message || 'Failed to create build' };
   }
 }
 
