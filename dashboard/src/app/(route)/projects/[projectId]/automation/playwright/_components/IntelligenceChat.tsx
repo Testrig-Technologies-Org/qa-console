@@ -5,6 +5,7 @@ import { Bot, Coins, Loader2, Send, Sparkles, ThumbsDown, ThumbsUp, User, Wrench
 import { askIntelligence, getTokenUsageStats, submitChatFeedback } from "@/lib/chat";
 import { cn } from "@/lib/utils";
 import { ChatChart } from "./ChatChart";
+import { chatChartKind } from "@/lib/chat-chart-types";
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,8 +19,8 @@ interface ChatMessage {
 const SUGGESTIONS = [
   "What's the pass rate for this project over the last 7 days?",
   "What are the most flaky tests here?",
-  "What's currently failing?",
   "Chart the pass rate trend over the last 30 days",
+  "Chart test count by browser",
 ];
 
 export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string }) {
@@ -140,7 +141,13 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
                   ))}
                 </div>
               )}
-              {m.toolCalls?.map((tc, j) => <ChatChart key={j} name={tc.name} result={tc.result} />)}
+              {/* Only the LAST chart-capable call in this turn renders — if the model called
+                  get_chart_data more than once (e.g. correcting itself mid-turn), showing every
+                  call would display a stale/wrong chart alongside the right one. */}
+              {(() => {
+                const lastChart = m.toolCalls ? [...m.toolCalls].reverse().find((tc) => chatChartKind(tc.name, tc.args)) : undefined;
+                return lastChart ? <ChatChart name={lastChart.name} args={lastChart.args} result={lastChart.result} /> : null;
+              })()}
               {m.role === 'assistant' && !m.error && m.question && (
                 <div className="flex items-center gap-1.5 px-1">
                   <button

@@ -172,71 +172,112 @@ async function getFlakyTestsSummary({ organizationId, project_name, limit }: { o
   return { project: project.name, flakyTests: flaky };
 }
 
-async function getPassRateTrend({ organizationId, project_name, days }: { organizationId: string; project_name?: string; days?: number }) {
-  const project = await resolveProject(organizationId, project_name);
-  if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
+type ChartMetric = 'pass_rate' | 'failure_count' | 'avg_duration' | 'test_count';
+type ChartGroupBy = 'date' | 'spec_file' | 'browser' | 'project' | 'test';
+type StatusFilter = 'all' | 'passed' | 'failed' | 'skipped';
 
-  const windowDays = Math.min(days || DEFAULT_STATS_DAYS, 90);
-  const cutoff = cutoffDate(windowDays);
-  const rows = await db.query.testResults.findMany({
-    where: and(
-      eq(testResults.organizationId, organizationId),
-      ...(project ? [eq(testResults.projectId, project.id)] : []),
-      gte(testResults.executedAt, cutoff),
-    ),
-    columns: { tests: true, executedAt: true },
-    limit: 2000,
-  });
+/**
+ * General-purpose chart data tool — one tool covering (metric × group-by) combinations instead of
+ * a hardcoded function per chart. Still fully code-driven: metric, group_by, and status_filter are
+ * constrained to fixed enums in the tool declaration (Gemini can't send arbitrary strings), the
+ * bucketing/aggregation logic lives here, and the chart *shape* (line/bar/pie) is picked by
+ * chatChartKind() in chat-chart-types.ts from (metric, group_by) — never chosen by the model, and
+ * never rendered from LLM-generated plotting code.
+ */
+async function getChartData({ organizationId, project_name, build_id, metric, group_by, status_filter, days }: {
+  organizationId: string; project_name?: string; build_id?: number; metric: ChartMetric; group_by: ChartGroupBy; status_filter?: StatusFilter; days?: number;
+}) {
+  const statusWanted = status_filter && status_filter !== 'all' ? status_filter.toUpperCase() : null;
 
-  const byDay = new Map<string, { total: number; passed: number }>();
+  // build_id pins to one specific build instead of a date window across builds — mutually
+  // exclusive with project_name/days, and still org-scoped (a build_id from another org 404s
+  // here rather than silently falling through to the all-builds path).
+  let windowDays = 0;
+  let scopeLabel: string;
+  let rows: { tests: any; executedAt: Date | null; specFile: string; projectId: number }[];
+
+  if (build_id) {
+    const build = await db.query.automationBuilds.findFirst({
+      where: and(eq(automationBuilds.id, build_id), eq(automationBuilds.organizationId, organizationId)),
+    });
+    if (!build) return { error: `No build #${build_id} found in this organization.` };
+
+    rows = await db.query.testResults.findMany({
+      where: eq(testResults.buildId, build_id),
+      columns: { tests: true, executedAt: true, specFile: true, projectId: true },
+    });
+    scopeLabel = `Build #${build_id}`;
+  } else {
+    const project = await resolveProject(organizationId, project_name);
+    if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
+
+    windowDays = Math.min(days || DEFAULT_STATS_DAYS, 90);
+    const cutoff = cutoffDate(windowDays);
+    rows = await db.query.testResults.findMany({
+      where: and(
+        eq(testResults.organizationId, organizationId),
+        ...(project ? [eq(testResults.projectId, project.id)] : []),
+        gte(testResults.executedAt, cutoff),
+      ),
+      columns: { tests: true, executedAt: true, specFile: true, projectId: true },
+      limit: 2000,
+    });
+    scopeLabel = project ? project.name : 'all projects in organization';
+  }
+
+  let projectNames: Record<number, string> = {};
+  if (group_by === 'project') {
+    const allProjects = await db.query.projects.findMany({
+      where: eq(projects.organizationId, organizationId),
+      columns: { id: true, name: true },
+    });
+    projectNames = Object.fromEntries(allProjects.map((p) => [p.id, p.name]));
+  }
+
+  const buckets = new Map<string, { total: number; passed: number; failed: number; durationSum: number }>();
+
   for (const row of rows) {
-    const day = new Date(row.executedAt as Date).toISOString().slice(0, 10);
     const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
     for (const t of tests) {
       if (!t.is_final) continue;
-      const entry = byDay.get(day) ?? { total: 0, passed: 0 };
-      entry.total++;
-      if (t.status === 'PASSED') entry.passed++;
-      byDay.set(day, entry);
+      if (statusWanted && t.status !== statusWanted) continue;
+
+      let key: string;
+      if (group_by === 'date') key = new Date(row.executedAt as Date).toISOString().slice(0, 10);
+      else if (group_by === 'spec_file') key = row.specFile;
+      else if (group_by === 'browser') key = t.project || 'unknown';
+      else if (group_by === 'test') key = t.title || 'Untitled test';
+      else key = projectNames[row.projectId] || `Project ${row.projectId}`;
+
+      const bucket = buckets.get(key) ?? { total: 0, passed: 0, failed: 0, durationSum: 0 };
+      bucket.total++;
+      if (t.status === 'PASSED') bucket.passed++;
+      else if (t.status === 'FAILED') bucket.failed++;
+      bucket.durationSum += Number(t.duration_ms) || 0;
+      buckets.set(key, bucket);
     }
   }
 
-  const series = Array.from(byDay.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, s]) => ({ date, total: s.total, passed: s.passed, passRate: Math.round((s.passed / s.total) * 1000) / 10 }));
-
-  return { scope: project ? project.name : 'all projects in organization', windowDays, series };
-}
-
-async function getFailureBreakdown({ organizationId, project_name, days }: { organizationId: string; project_name?: string; days?: number }) {
-  const project = await resolveProject(organizationId, project_name);
-  if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
-
-  const windowDays = days || DEFAULT_FAILURES_DAYS;
-  const cutoff = cutoffDate(windowDays);
-  const rows = await db.query.testResults.findMany({
-    where: and(
-      eq(testResults.organizationId, organizationId),
-      ...(project ? [eq(testResults.projectId, project.id)] : []),
-      gte(testResults.executedAt, cutoff),
-    ),
-    columns: { tests: true, specFile: true },
-    limit: 1000,
+  let series = Array.from(buckets.entries()).map(([label, b]) => {
+    const value =
+      metric === 'pass_rate' ? (b.total > 0 ? Math.round((b.passed / b.total) * 1000) / 10 : 0) :
+      metric === 'failure_count' ? b.failed :
+      metric === 'avg_duration' ? (b.total > 0 ? Math.round(b.durationSum / b.total) : 0) :
+      b.total; // test_count
+    return { label, value };
   });
 
-  const bySpec = new Map<string, number>();
-  for (const row of rows) {
-    const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
-    const failures = tests.filter((t: any) => t.is_final && t.status === 'FAILED').length;
-    if (failures > 0) bySpec.set(row.specFile, (bySpec.get(row.specFile) || 0) + failures);
+  // A "top failures by X" chart shouldn't be padded with zero-failure buckets — but a date trend
+  // or a pass-rate/duration breakdown legitimately wants every bucket shown, zero included.
+  if (metric === 'failure_count' && group_by !== 'date') {
+    series = series.filter((s) => s.value > 0);
   }
 
-  const breakdown = Array.from(bySpec.entries())
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([specFile, failures]) => ({ specFile, failures }));
+  series = group_by === 'date'
+    ? series.sort((a, b) => a.label.localeCompare(b.label))
+    : series.sort((a, b) => b.value - a.value).slice(0, 15);
 
-  return { scope: project ? project.name : 'all projects in organization', windowDays, breakdown };
+  return { scope: scopeLabel, metric, group_by, status_filter: status_filter || 'all', windowDays: build_id ? undefined : windowDays, series };
 }
 
 /* -------------------- DISPATCH + DECLARATIONS -------------------- */
@@ -250,8 +291,7 @@ const TOOL_IMPLS: Record<string, ToolFn> = {
   get_build_summary: getBuildSummary,
   get_failing_tests: getFailingTests,
   get_flaky_tests_summary: getFlakyTestsSummary,
-  get_pass_rate_trend: getPassRateTrend,
-  get_failure_breakdown: getFailureBreakdown,
+  get_chart_data: getChartData,
 };
 
 /** Executes a tool by name, always injecting the caller's real organizationId — args from the model can never override it. */
@@ -328,25 +368,26 @@ export const TOOL_DECLARATIONS = [
     },
   },
   {
-    name: 'get_pass_rate_trend',
-    description: 'Get a day-by-day pass rate trend series, for charting how a project (or the whole org) is trending over time.',
+    name: 'get_chart_data',
+    description: 'Get chart-ready data for any visualization/chart/graph/plot request. Choose a metric ' +
+      '(what to measure) and group_by (how to bucket it) to cover things like "pass rate over time", ' +
+      '"failures by spec file", "test count by browser", "average duration by project", "duration per ' +
+      'individual test", etc. Use group_by=test for anything about individual tests (e.g. "time taken for ' +
+      'each failed test" → metric=avg_duration, group_by=test, status_filter=failed). To scope to ONE ' +
+      'specific build (e.g. "in build 240003" or "for this build") pass build_id instead of project_name/' +
+      'days — build_id takes priority and ignores the date window entirely. The dashboard renders the ' +
+      'result as an actual chart automatically — reply afterward with just a short caption.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects)' },
-        days: { type: 'NUMBER', description: 'Lookback window in days, default 30, max 90' },
+        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects combined). Ignored if build_id is set.' },
+        build_id: { type: 'NUMBER', description: 'Scope to exactly one build by its numeric ID, instead of a project + date window.' },
+        metric: { type: 'STRING', enum: ['pass_rate', 'failure_count', 'avg_duration', 'test_count'], description: 'What to measure' },
+        group_by: { type: 'STRING', enum: ['date', 'spec_file', 'browser', 'project', 'test'], description: 'How to bucket the data — use "test" to chart individual tests' },
+        status_filter: { type: 'STRING', enum: ['all', 'passed', 'failed', 'skipped'], description: 'Restrict to tests with this final status, default all. Use "failed" for e.g. "each failed test".' },
+        days: { type: 'NUMBER', description: 'Lookback window in days, default 30, max 90. Ignored if build_id is set.' },
       },
-    },
-  },
-  {
-    name: 'get_failure_breakdown',
-    description: 'Get failure counts grouped by spec file, for charting which files/areas are failing most.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects)' },
-        days: { type: 'NUMBER', description: 'Lookback window in days, default 7' },
-      },
+      required: ['metric', 'group_by'],
     },
   },
 ];

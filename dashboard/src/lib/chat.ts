@@ -11,6 +11,8 @@ const MAX_TOOL_ROUNDS = 4;
 const MAX_RETRIES_PER_CALL = 1; // one retry on a transient 429 — does nothing for an exhausted daily quota, only per-minute bursts
 const RETRY_DELAY_MS = 3000;
 const RECENT_FEEDBACK_LIMIT = 5;
+const GEMINI_FETCH_TIMEOUT_MS = 20000; // fetch() has no default timeout — without this, a stalled connection hangs the chat forever
+const OVERALL_BUDGET_MS = 60000; // hard ceiling across all rounds, so a slow-but-not-quite-timing-out pattern can't add up to an effectively infinite wait
 
 const BASE_SYSTEM_INSTRUCTION = `You are the Run Intelligence assistant inside a QA test-automation dashboard.
 You answer questions about a single organization's test runs, builds, and failures.
@@ -21,9 +23,13 @@ Rules:
 - If a project name the user mentions doesn't resolve, call list_projects and suggest close matches.
 - Keep answers concise and concrete — lead with the number/fact, minimal preamble.
 - Data is already scoped to the caller's organization; never ask the user to confirm identity or access.
-- For requests to visualize, chart, graph, or show a trend, call get_pass_rate_trend or get_failure_breakdown
-  as appropriate. The dashboard renders that tool's data as an actual chart automatically, so once you have
-  the result, reply with just a short one-sentence caption — don't describe the data point-by-point in prose.`;
+- For requests to visualize, chart, graph, or plot anything, call get_chart_data with the metric/group_by
+  that best matches the request (e.g. "trend over time" → group_by date; "by browser/spec file/project" →
+  that group_by; "passed but slow" → metric=avg_duration, status_filter=passed). If the user names a
+  status (passed/failed/skipped), that status MUST go in status_filter — never omit it or use the wrong one.
+  The dashboard renders the result as an actual chart automatically, so once you have it, reply with just a
+  short one-sentence caption — and that caption's wording (metric/status/scope) must exactly match the
+  status_filter and metric you actually called, not what you intended to call.`;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -40,15 +46,27 @@ async function callGemini(contents: any[], systemInstruction: string, organizati
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES_PER_CALL; attempt++) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        tools: [{ functionDeclarations: TOOL_DECLARATIONS }],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), GEMINI_FETCH_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          tools: [{ functionDeclarations: TOOL_DECLARATIONS }],
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+        }),
+        signal: controller.signal,
+      });
+    } catch (e: any) {
+      if (e.name === 'AbortError') throw new Error('TIMED_OUT');
+      throw e;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (res.status === 429) {
       lastError = new Error('RATE_LIMITED');
@@ -122,8 +140,10 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
     ];
 
     const toolCalls: ToolCallRecord[] = [];
+    const startedAt = Date.now();
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      if (Date.now() - startedAt > OVERALL_BUDGET_MS) throw new Error('TIMED_OUT');
       const data = await callGemini(contents, systemInstruction, membership.organizationId, userId);
       const parts = data.candidates?.[0]?.content?.parts || [];
       const functionCallParts = parts.filter((p: any) => p.functionCall);
@@ -149,6 +169,9 @@ export async function askIntelligence(question: string, history: ChatMessage[] =
   } catch (e: any) {
     if (e.message === 'RATE_LIMITED') {
       return { success: false, error: "Hit the LLM provider's rate limit — try again in a bit." };
+    }
+    if (e.message === 'TIMED_OUT') {
+      return { success: false, error: 'That took too long and timed out — try again, or narrow the question.' };
     }
     console.error('❌ askIntelligence error:', e.message);
     return { success: false, error: e.message || 'Failed to get an answer' };
