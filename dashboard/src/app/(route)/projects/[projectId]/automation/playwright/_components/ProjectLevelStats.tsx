@@ -48,7 +48,7 @@ export function ProjectLevelStats({ tests }: ProjectLevelStatsProps) {
           <div className="w-px h-6 bg-border" />
           <div className="flex flex-col items-center">
             <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 animate-pulse leading-none">{active}</span>
-            <span className="text-[8px] font-bold text-muted uppercase tracking-tighter mt-1">Active</span>
+            <span className="text-[8px] font-bold text-muted uppercase tracking-tighter mt-1">Running</span>
           </div>
         </>
       )}

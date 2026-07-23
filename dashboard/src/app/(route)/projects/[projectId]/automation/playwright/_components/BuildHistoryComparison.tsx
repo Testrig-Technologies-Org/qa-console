@@ -207,8 +207,10 @@ export function BuildHistoryComparison({ projectId }: { projectId: number }) {
                 </div>
             </div>
 
-            {/* MATRIX */}
-            <div className="relative overflow-x-auto">
+            {/* MATRIX — bounded height + scroll (both axes) instead of stretching the page for
+                projects with a long test list; sticky first column works correctly now that this
+                div, not the page, is the scrolling ancestor. */}
+            <div className="relative max-h-[420px] overflow-auto">
                 {loading && (
                     <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur flex items-center justify-center text-[11px] font-black tracking-widest text-foreground animate-pulse">
                         established_data_handshake...

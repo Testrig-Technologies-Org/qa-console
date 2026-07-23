@@ -440,6 +440,58 @@ export async function getSimilarFailures(buildId: number, uniqueKey: string, lim
   }
 }
 
+/**
+ * Batched version of getSimilarFailures for a whole build's Failure_Correlation list — one
+ * round trip and effectively one query instead of N (previously: N separate server-action calls,
+ * each redoing its own auth/membership/lookup work, for a build with N failed tests). Does the
+ * cosine-distance comparison for every one of this build's embedded failures against the rest of
+ * the org in a single self-join, then groups/trims to `limitPerTest` in JS.
+ */
+export async function getSimilarFailuresForBuild(buildId: number, limitPerTest = 5) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { error: 'No organization found' };
+
+    const buildFailures = await db.query.testFailureEmbeddings.findMany({
+      where: and(eq(testFailureEmbeddings.buildId, buildId), eq(testFailureEmbeddings.organizationId, membership.organizationId)),
+    });
+
+    const byKey: Record<string, { indexed: boolean; pending: boolean; similar: any[] }> = {};
+    for (const f of buildFailures) {
+      byKey[f.uniqueKey] = { indexed: !!f.embedding, pending: !f.embedding, similar: [] };
+    }
+
+    const indexedIds = buildFailures.filter((f) => f.embedding).map((f) => f.id);
+    if (indexedIds.length === 0) return { success: true, byKey };
+
+    const result = await db.execute(sql`
+      SELECT curr.unique_key AS source_key, other.id, other.build_id, other.title, other.spec_file, other.created_at,
+             VEC_COSINE_DISTANCE(curr.embedding, other.embedding) AS distance
+      FROM test_failure_embeddings curr
+      JOIN test_failure_embeddings other
+        ON other.organization_id = curr.organization_id AND other.id != curr.id AND other.embedding IS NOT NULL
+      WHERE curr.id IN (${sql.join(indexedIds, sql`, `)})
+        AND curr.organization_id = ${membership.organizationId}
+      ORDER BY curr.unique_key, distance
+    `);
+
+    for (const row of result.rows as any[]) {
+      const bucket = byKey[row.source_key];
+      if (bucket && bucket.similar.length < limitPerTest) bucket.similar.push(row);
+    }
+
+    return { success: true, byKey };
+  } catch (e: any) {
+    console.error('❌ getSimilarFailuresForBuild error:', e.message);
+    return { error: 'Failed to fetch similar failures' };
+  }
+}
+
 const FLAKY_LOOKBACK_DAYS = 60;
 const FLAKY_ROW_SCAN_CAP = 500; // safety cap on test_results rows scanned per call
 

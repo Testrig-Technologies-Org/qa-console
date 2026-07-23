@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
     Server, Cpu, Activity, Terminal, Timer, Search,
     ChevronRight, FileCode, Clock, Filter,
-    TrendingDown, Shield, Zap, Bug, Layers, ListTree, StopCircle, Loader2, GitCompare, Shuffle
+    TrendingDown, Shield, Zap, Bug, Layers, ListTree, StopCircle, Loader2
 } from "lucide-react";
 import {
     BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,8 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
 import { BuildHistoryComparison } from "./BuildHistoryComparison";
-import { SimilarFailures } from "./SimilarFailures";
-import { FlakyTests } from "./FlakyTests";
+import { IntelligencePanels } from "./IntelligencePanels";
 import { IntelligenceChat } from "./IntelligenceChat";
 import { useTheme } from "next-themes";
 import { isBuildStale } from "@/lib/build-staleness";
@@ -144,6 +143,11 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
 
     return (
         <div className="space-y-6 transition-colors duration-300">
+            {/* RUN INTELLIGENCE — natural-language Q&A over this org's test/build data, via Gemini
+                function-calling over the safe query helpers in chat-tools.ts. Kept at the top so it's
+                the first thing visible when opening Run Intelligence. */}
+            <IntelligenceChat />
+
             <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden selection:bg-emerald-500/30">
 
                 {/* HEADER */}
@@ -179,20 +183,20 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                 {/* ANALYTICS GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border border-b border-border">
                     <div className="lg:col-span-4 p-6 flex items-center gap-8 bg-emerald-500/[0.03]">
-                        <div className="w-28 h-28 relative shrink-0">
+                        <div className="w-40 h-40 relative shrink-0">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={pieData}
-                                        innerRadius={35} outerRadius={46} paddingAngle={4} dataKey="v" stroke="none"
+                                        innerRadius={50} outerRadius={66} paddingAngle={4} dataKey="v" stroke="none"
                                     >
                                         {pieData.map((entry, index) => <Cell key={index} fill={entry.c} />)}
                                     </Pie>
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-xl font-black tabular-nums text-foreground leading-none">{stabilityIndex}%</span>
-                                <span className="text-[7px] text-muted font-bold uppercase mt-1">Stability</span>
+                                <span className="text-2xl font-black tabular-nums text-foreground leading-none">{stabilityIndex}%</span>
+                                <span className="text-[8px] text-muted font-bold uppercase mt-1">Stability</span>
                             </div>
                         </div>
                         <div className="flex flex-col justify-center space-y-3 flex-1 overflow-hidden">
@@ -233,7 +237,7 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                     </div>
                     <div className="flex bg-background border border-border px-2 gap-2 items-center">
                         <FilterBtn active={filter === 'all'} label="ALL" onClick={() => setFilter('all')} />
-                        <FilterBtn active={filter === 'failed'} label="CRITICAL" onClick={() => setFilter('failed')} />
+                        <FilterBtn active={filter === 'failed'} label="FAILED" onClick={() => setFilter('failed')} />
                     </div>
                 </div>
 
@@ -297,40 +301,18 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                 </div>
             </div>
 
-            {/* RUN INTELLIGENCE — natural-language Q&A over this org's test/build data, via Gemini function-calling over the safe query helpers in chat-tools.ts */}
-            <IntelligenceChat />
-
-            {/* RUN INTELLIGENCE — flaky test radar: tests that needed a retry to pass, ranked across this project's recent build history */}
+            {/* RUN INTELLIGENCE — flaky test radar + failure correlation, combined into one tabbed card
+                (each list scrolls within a fixed height rather than stretching the page). Failure
+                matches are fetched in one batched call (getSimilarFailuresForBuild) rather than one
+                server-action round trip per failed test. */}
             {buildData.projectId && (
-                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
-                    <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
-                        <Shuffle size={14} className="text-amber-500" />
-                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Flaky_Test_Radar</span>
-                    </div>
-                    <FlakyTests projectId={Number(buildData.projectId)} />
-                </div>
-            )}
-
-            {/* RUN INTELLIGENCE — semantically similar past failures per current failure, via TiDB vector search */}
-            {stats.failed > 0 && buildId && (
-                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
-                    <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
-                        <GitCompare size={14} className="text-indigo-500" />
-                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Failure_Correlation</span>
-                    </div>
-                    <div className="divide-y divide-border">
-                        {analysis.allTests
-                            .filter((t: any) => t.isF && t.unique_key)
-                            .map((t: any) => (
-                                <div key={t.unique_key} className="p-6 space-y-4">
-                                    <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500 text-xs font-bold uppercase tracking-tight">
-                                        <Bug size={14} className="shrink-0" /> <span className="truncate">{t.title}</span>
-                                    </div>
-                                    <SimilarFailures buildId={Number(buildId)} uniqueKey={t.unique_key} />
-                                </div>
-                            ))}
-                    </div>
-                </div>
+                <IntelligencePanels
+                    projectId={Number(buildData.projectId)}
+                    buildId={buildId ? Number(buildId) : undefined}
+                    failedTests={analysis.allTests
+                        .filter((t: any) => t.isF && t.unique_key)
+                        .map((t: any) => ({ uniqueKey: t.unique_key, title: t.title }))}
+                />
             )}
 
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">

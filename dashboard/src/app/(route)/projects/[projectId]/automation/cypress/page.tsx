@@ -284,7 +284,7 @@ function AutomationDashboardContent() {
                                 <div className="h-full bg-emerald-500" style={{ width: `${(group.stats.passed / group.totalTests) * 100}%` }} />
                                 <div className="h-full bg-rose-500" style={{ width: `${(group.stats.failed / group.totalTests) * 100}%` }} />
                               </div>
-                              <span className="text-[10px] font-mono text-muted">{group.stats.passed}/{group.totalTests} PASS</span>
+                              <span className="text-[10px] font-mono text-muted">{group.stats.passed}/{group.totalTests} PASSED</span>
                             </div>
                           </div>
                           <div className="divide-y divide-border/30">
