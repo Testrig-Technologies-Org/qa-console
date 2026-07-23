@@ -25,6 +25,10 @@ if (qaConsoleConfigured) {
       apiKey: process.env.QA_CONSOLE_API_KEY,
       projectId: Number(process.env.QA_CONSOLE_PROJECT_ID),
       environment: process.env.CI ? 'ci' : 'dev',
+      // Set to group multiple Playwright processes (e.g. sharded CI jobs) into one build on
+      // the dashboard — paste the key from the dashboard's Create_Build action, or leave unset
+      // to fall back to QA_CONSOLE_SESSION_ID, or omit both for the default one-build-per-process behavior.
+      sessionId: process.env.QA_CONSOLE_SESSION_ID,
     },
   ]);
 }

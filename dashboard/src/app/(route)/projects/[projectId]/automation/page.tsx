@@ -1,8 +1,8 @@
 'use client';
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getBuildsByProjectAndType, getProjectById } from "@/lib/actions";
-import { Loader2, Activity, Calendar, Box, ChevronRight, Clock, GitMerge, Shield, Server } from "lucide-react";
+import { deleteBuild, getBuildsByProjectAndType, getProjectById } from "@/lib/actions";
+import { Loader2, Activity, Calendar, Box, ChevronRight, Clock, GitMerge, Shield, Server, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/app/(route)/projects/[projectId]/automation/cypress/_components/StatusBadge";
 import { CreateBuildModal } from "@/app/(route)/projects/[projectId]/automation/_components/CreateBuildModal";
 import { cn } from "@/lib/utils";
@@ -14,9 +14,29 @@ export default function ProjectAutomationPage() {
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const handleDelete = async (e: React.MouseEvent, buildId: number) => {
+    e.stopPropagation();
+    if (!confirm(`Permanently delete Build_Reference_${buildId}? This also removes its test results and cannot be undone.`)) return;
+
+    setDeletingId(buildId);
+    try {
+      const res = await deleteBuild(buildId);
+      if (res.success) {
+        setBuilds((prev) => prev.filter((b) => b.id !== buildId));
+      } else {
+        console.error("Delete build error:", res.error);
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Refetches builds without touching `loading` — used for background refreshes (e.g. after
+  // creating a build from the modal) so the full-screen loader below doesn't unmount whatever
+  // triggered the refresh (the modal, mid-way through showing the new build's session ID).
+  const refetchBuilds = async () => {
     try {
       const proj = await getProjectById(Number(projectId));
 
@@ -33,13 +53,13 @@ export default function ProjectAutomationPage() {
       }
     } catch (error) {
       console.error("Critical Registry Fetch Error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (projectId) fetchData();
+    if (!projectId) return;
+    setLoading(true);
+    refetchBuilds().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -138,6 +158,14 @@ export default function ProjectAutomationPage() {
                     </div>
                 </div>
                 <StatusBadge status={b.status} />
+                <button
+                  onClick={(e) => handleDelete(e, b.id)}
+                  disabled={deletingId === b.id}
+                  title="Delete build"
+                  className="w-8 h-8 flex items-center justify-center border border-border bg-card/50 text-muted hover:bg-rose-600 hover:border-rose-500 hover:text-white transition-all disabled:opacity-50"
+                >
+                  {deletingId === b.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                </button>
                 <div className="w-8 h-8 flex items-center justify-center border border-border bg-card/50 group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-all">
                   <ChevronRight size={16} className="text-muted group-hover:text-white" />
                 </div>
@@ -165,7 +193,7 @@ export default function ProjectAutomationPage() {
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         projectId={Number(projectId)}
-        onCreated={fetchData}
+        onCreated={refetchBuilds}
       />
     </div>
   );
