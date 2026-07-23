@@ -216,6 +216,23 @@ export const llmUsage = mysqlTable('llm_usage', {
   createdIdx: index('llm_usage_created_idx').on(table.createdAt),
 }));
 
+// 12. PINNED CHARTS (Run Intelligence — a chart generated in chat, saved onto the project's
+// dashboard). Stores the query args, not a data snapshot — a pinned chart re-runs get_chart_data
+// live each time the dashboard loads, so it never goes stale the way a saved image would.
+export const pinnedCharts = mysqlTable('pinned_charts', {
+  id: int('id').primaryKey().autoincrement(),
+  organizationId: varchar('organization_id', { length: 255 }).references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  projectId: int('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  toolName: varchar('tool_name', { length: 100 }).default('get_chart_data').notNull(),
+  args: json('args').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index('pinned_charts_org_idx').on(table.organizationId),
+  projectIdx: index('pinned_charts_project_idx').on(table.projectId),
+}));
+
 /* -------------------- RELATIONS -------------------- */
 
 // Users Relations

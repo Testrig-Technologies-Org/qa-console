@@ -15,6 +15,7 @@ import { StatusBadge } from "./StatusBadge";
 import { BuildHistoryComparison } from "./BuildHistoryComparison";
 import { IntelligencePanels } from "./IntelligencePanels";
 import { IntelligenceChat } from "./IntelligenceChat";
+import { PinnedCharts, PinnedChartsHandle } from "./PinnedCharts";
 import { useTheme } from "next-themes";
 import { isBuildStale } from "@/lib/build-staleness";
 
@@ -41,6 +42,7 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
     const { theme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const [stopping, setStopping] = useState(false);
+    const pinnedChartsRef = React.useRef<PinnedChartsHandle>(null);
 
     const handleStop = async () => {
         if (!onStopBuild) return;
@@ -145,8 +147,23 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
         <div className="space-y-6 transition-colors duration-300">
             {/* RUN INTELLIGENCE — natural-language Q&A over this org's test/build data, via Gemini
                 function-calling over the safe query helpers in chat-tools.ts. Kept at the top so it's
-                the first thing visible when opening Run Intelligence. */}
-            <IntelligenceChat />
+                the first thing visible when opening Run Intelligence. Charts pinned here (Add button)
+                land in the Pinned_Charts section below, live via a ref-triggered refresh. */}
+            <IntelligenceChat
+                projectId={buildData.projectId ? Number(buildData.projectId) : undefined}
+                onChartPinned={() => pinnedChartsRef.current?.refresh()}
+            />
+
+            {/* RUN INTELLIGENCE — charts pinned from the chat above, saved onto this project's dashboard. */}
+            {buildData.projectId && (
+                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
+                    <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
+                        <Terminal size={14} className="text-indigo-500" />
+                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Pinned_Charts</span>
+                    </div>
+                    <PinnedCharts ref={pinnedChartsRef} projectId={Number(buildData.projectId)} />
+                </div>
+            )}
 
             <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden selection:bg-emerald-500/30">
 

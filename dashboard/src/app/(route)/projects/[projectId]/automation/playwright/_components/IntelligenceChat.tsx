@@ -23,7 +23,13 @@ const SUGGESTIONS = [
   "Chart test count by browser",
 ];
 
-export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string }) {
+interface IntelligenceChatProps {
+  defaultQuestion?: string;
+  projectId?: number;
+  onChartPinned?: () => void;
+}
+
+export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -146,7 +152,9 @@ export function IntelligenceChat({ defaultQuestion }: { defaultQuestion?: string
                   call would display a stale/wrong chart alongside the right one. */}
               {(() => {
                 const lastChart = m.toolCalls ? [...m.toolCalls].reverse().find((tc) => chatChartKind(tc.name, tc.args)) : undefined;
-                return lastChart ? <ChatChart name={lastChart.name} args={lastChart.args} result={lastChart.result} /> : null;
+                return lastChart
+                  ? <ChatChart name={lastChart.name} args={lastChart.args} result={lastChart.result} projectId={projectId} onPinned={onChartPinned} />
+                  : null;
               })()}
               {m.role === 'assistant' && !m.error && m.question && (
                 <div className="flex items-center gap-1.5 px-1">

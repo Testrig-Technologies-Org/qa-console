@@ -172,6 +172,60 @@ async function getFlakyTestsSummary({ organizationId, project_name, limit }: { o
   return { project: project.name, flakyTests: flaky };
 }
 
+const DEFAULT_SEARCH_LIMIT = 15;
+const SEARCH_ROW_SCAN_CAP = 1000; // no date window here — the point is "current status of test X", so scan recent rows regardless of age until enough matches are found
+
+/**
+ * General test lookup — by name (partial, case-insensitive), status, or both. Distinct from
+ * get_failing_tests (failures only) and get_chart_data (aggregates only): this returns each
+ * matching test's actual current status, not just a count or a failure list.
+ */
+async function searchTests({ organizationId, project_name, query, status_filter, limit }: {
+  organizationId: string; project_name?: string; query?: string; status_filter?: StatusFilter; limit?: number;
+}) {
+  const project = await resolveProject(organizationId, project_name);
+  if (project === undefined) return { error: `No project found matching "${project_name}". Call list_projects to see available projects.` };
+
+  const statusWanted = status_filter && status_filter !== 'all' ? status_filter.toUpperCase() : null;
+  const needle = query?.toLowerCase().trim();
+
+  const rows = await db.query.testResults.findMany({
+    where: and(
+      eq(testResults.organizationId, organizationId),
+      ...(project ? [eq(testResults.projectId, project.id)] : []),
+    ),
+    orderBy: (t, { desc }) => [desc(t.executedAt)],
+    limit: SEARCH_ROW_SCAN_CAP,
+  });
+
+  const byKey = new Map<string, { title: string; status: string; specFile: string; buildId: number; durationMs: number; lastRunAt: Date }>();
+  for (const row of rows) {
+    const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
+    for (const t of tests) {
+      if (!t.is_final) continue;
+      if (statusWanted && t.status !== statusWanted) continue;
+      if (needle && !t.title?.toLowerCase().includes(needle)) continue;
+
+      const key = t.unique_key || `${t.project}::${t.title}`;
+      if (byKey.has(key)) continue; // rows are newest-first, so the first match per key is its current status
+
+      byKey.set(key, {
+        title: t.title || 'Untitled test',
+        status: t.status || 'UNKNOWN',
+        specFile: row.specFile,
+        buildId: row.buildId,
+        durationMs: Number(t.duration_ms) || 0,
+        lastRunAt: row.executedAt as Date,
+      });
+    }
+  }
+
+  return {
+    scope: project ? project.name : 'all projects in organization',
+    tests: Array.from(byKey.values()).slice(0, Math.min(limit || DEFAULT_SEARCH_LIMIT, MAX_LIMIT)),
+  };
+}
+
 type ChartMetric = 'pass_rate' | 'failure_count' | 'avg_duration' | 'test_count';
 type ChartGroupBy = 'date' | 'spec_file' | 'browser' | 'project' | 'test' | 'status';
 type StatusFilter = 'all' | 'passed' | 'failed' | 'skipped';
@@ -184,10 +238,11 @@ type StatusFilter = 'all' | 'passed' | 'failed' | 'skipped';
  * chatChartKind() in chat-chart-types.ts from (metric, group_by) — never chosen by the model, and
  * never rendered from LLM-generated plotting code.
  */
-async function getChartData({ organizationId, project_name, build_id, metric, group_by, status_filter, days }: {
-  organizationId: string; project_name?: string; build_id?: number; metric: ChartMetric; group_by: ChartGroupBy; status_filter?: StatusFilter; days?: number;
+async function getChartData({ organizationId, project_name, build_id, spec_file, metric, group_by, status_filter, days }: {
+  organizationId: string; project_name?: string; build_id?: number; spec_file?: string; metric: ChartMetric; group_by: ChartGroupBy; status_filter?: StatusFilter; days?: number;
 }) {
   const statusWanted = status_filter && status_filter !== 'all' ? status_filter.toUpperCase() : null;
+  const specNeedle = spec_file?.toLowerCase().trim() || null;
 
   // build_id pins to one specific build instead of a date window across builds — mutually
   // exclusive with project_name/days, and still org-scoped (a build_id from another org 404s
@@ -224,6 +279,7 @@ async function getChartData({ organizationId, project_name, build_id, metric, gr
     });
     scopeLabel = project ? project.name : 'all projects in organization';
   }
+  if (specNeedle) scopeLabel += ` · spec matching "${spec_file}"`;
 
   let projectNames: Record<number, string> = {};
   if (group_by === 'project') {
@@ -237,6 +293,8 @@ async function getChartData({ organizationId, project_name, build_id, metric, gr
   const buckets = new Map<string, { total: number; passed: number; failed: number; durationSum: number }>();
 
   for (const row of rows) {
+    if (specNeedle && !row.specFile?.toLowerCase().includes(specNeedle)) continue;
+
     const tests = Array.isArray(row.tests) ? (row.tests as any[]) : [];
     for (const t of tests) {
       if (!t.is_final) continue;
@@ -292,6 +350,7 @@ const TOOL_IMPLS: Record<string, ToolFn> = {
   get_build_summary: getBuildSummary,
   get_failing_tests: getFailingTests,
   get_flaky_tests_summary: getFlakyTestsSummary,
+  search_tests: searchTests,
   get_chart_data: getChartData,
 };
 
@@ -369,6 +428,21 @@ export const TOOL_DECLARATIONS = [
     },
   },
   {
+    name: 'search_tests',
+    description: 'Look up tests by name and/or status, returning each match\'s actual current status, spec ' +
+      'file, and build — not just failures, and not an aggregate. Use this for "what\'s the status of test X", ' +
+      '"find tests with Y in the name", "is test Z passing", or any test-level lookup by name.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects)' },
+        query: { type: 'STRING', description: 'Text to search for in test titles, case-insensitive partial match (omit to list by status only)' },
+        status_filter: { type: 'STRING', enum: ['all', 'passed', 'failed', 'skipped'], description: 'Restrict to tests with this current status, default all' },
+        limit: { type: 'NUMBER', description: 'Max tests to return, default 15, max 20' },
+      },
+    },
+  },
+  {
     name: 'get_chart_data',
     description: 'Get chart-ready data for any visualization/chart/graph/plot request. Choose a metric ' +
       '(what to measure) and group_by (how to bucket it) to cover things like "pass rate over time", ' +
@@ -379,13 +453,17 @@ export const TOOL_DECLARATIONS = [
       'pass/failed/skipped breakdown pie chart — do NOT try to combine two separate status_filter calls or ' +
       'invent another way to show pass-vs-fail, group_by=status already does exactly that in one call. To ' +
       'scope to ONE specific build (e.g. "in build 240003" or "for this build") pass build_id instead of ' +
-      'project_name/days — build_id takes priority and ignores the date window entirely. The dashboard ' +
+      'project_name/days — build_id takes priority and ignores the date window entirely. To restrict to a ' +
+      'specific spec file or folder (e.g. "smoke-check-tests", "in the login spec") pass spec_file — this ' +
+      'works together with build_id/group_by, e.g. "pie of pass/fail for smoke-check-tests in build 240003" ' +
+      '→ build_id=240003, spec_file="smoke-check-tests", metric=test_count, group_by=status. The dashboard ' +
       'renders the result as an actual chart automatically — reply afterward with just a short caption.',
     parameters: {
       type: 'OBJECT',
       properties: {
         project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects combined). Ignored if build_id is set.' },
         build_id: { type: 'NUMBER', description: 'Scope to exactly one build by its numeric ID, instead of a project + date window.' },
+        spec_file: { type: 'STRING', description: 'Restrict to spec files whose path contains this text (case-insensitive partial match), e.g. "smoke-check-tests". Combines with build_id/project_name.' },
         metric: { type: 'STRING', enum: ['pass_rate', 'failure_count', 'avg_duration', 'test_count'], description: 'What to measure' },
         group_by: { type: 'STRING', enum: ['date', 'spec_file', 'browser', 'project', 'test', 'status'], description: 'How to bucket the data — "test" for individual tests, "status" for a pass/failed/skipped pie' },
         status_filter: { type: 'STRING', enum: ['all', 'passed', 'failed', 'skipped'], description: 'Restrict to tests with this final status, default all. Use "failed" for e.g. "each failed test" — but leave as "all" when group_by=status.' },

@@ -3,7 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { db } from '../../db';
-import { chatFeedback, llmUsage, organizationMembers } from '../../db/schema';
+import { chatFeedback, llmUsage, organizationMembers, pinnedCharts, projects } from '../../db/schema';
 import { executeTool, TOOL_DECLARATIONS } from './chat-tools';
 
 const MODEL = 'gemini-2.5-flash';
@@ -29,7 +29,10 @@ Rules:
   status (passed/failed/skipped), that status MUST go in status_filter — never omit it or use the wrong one.
   The dashboard renders the result as an actual chart automatically, so once you have it, reply with just a
   short one-sentence caption — and that caption's wording (metric/status/scope) must exactly match the
-  status_filter and metric you actually called, not what you intended to call.`;
+  status_filter and metric you actually called, not what you intended to call.
+- For "what's the status of test X", "is test Y passing", or "find tests with Z in the name", call
+  search_tests — it returns each matching test's actual current status by name, unlike get_failing_tests
+  (failures only) or get_chart_data (aggregates only, no individual test names/status back).`;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -236,5 +239,90 @@ export async function getTokenUsageStats(days = 7) {
   } catch (e: any) {
     console.error('❌ getTokenUsageStats error:', e.message);
     return { success: false as const, error: 'Failed to fetch token usage' };
+  }
+}
+
+/** Pins a chat-generated chart onto the project's Run Intelligence dashboard — stores the query args, not a snapshot, so it re-runs live on every load. */
+export async function pinChart(projectId: number, title: string, toolName: string, args: Record<string, any>) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: 'Unauthorized' };
+
+    const project = await db.query.projects.findFirst({ where: eq(projects.id, projectId) });
+    if (!project) return { success: false, error: 'Project not found' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership || membership.organizationId !== project.organizationId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const res = await db.insert(pinnedCharts).values({
+      organizationId: project.organizationId,
+      projectId,
+      userId,
+      title: title.slice(0, 255) || 'Untitled chart',
+      toolName,
+      args,
+    });
+    const insertedId = (res as any).lastInsertId || (res as any)[0]?.insertId;
+
+    return { success: true, id: insertedId };
+  } catch (e: any) {
+    console.error('❌ pinChart error:', e.message);
+    return { success: false, error: 'Failed to pin chart' };
+  }
+}
+
+/** Unpins a chart from the dashboard. */
+export async function unpinChart(chartId: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { success: false, error: 'No organization found' };
+
+    await db.delete(pinnedCharts).where(and(eq(pinnedCharts.id, chartId), eq(pinnedCharts.organizationId, membership.organizationId)));
+    return { success: true };
+  } catch (e: any) {
+    console.error('❌ unpinChart error:', e.message);
+    return { success: false, error: 'Failed to unpin chart' };
+  }
+}
+
+/** Lists a project's pinned charts, re-running each one's query live rather than serving a stale snapshot. */
+export async function getPinnedCharts(projectId: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false as const, error: 'Unauthorized' };
+
+    const membership = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, userId),
+    });
+    if (!membership) return { success: false as const, error: 'No organization found' };
+
+    const pins = await db.query.pinnedCharts.findMany({
+      where: and(eq(pinnedCharts.projectId, projectId), eq(pinnedCharts.organizationId, membership.organizationId)),
+      orderBy: (p, { desc }) => [desc(p.createdAt)],
+    });
+
+    const charts = await Promise.all(
+      pins.map(async (pin) => ({
+        id: pin.id,
+        title: pin.title,
+        name: pin.toolName,
+        args: pin.args as Record<string, any>,
+        result: await executeTool(pin.toolName, pin.args as Record<string, any>, membership.organizationId),
+      })),
+    );
+
+    return { success: true as const, charts };
+  } catch (e: any) {
+    console.error('❌ getPinnedCharts error:', e.message);
+    return { success: false as const, error: 'Failed to fetch pinned charts' };
   }
 }
