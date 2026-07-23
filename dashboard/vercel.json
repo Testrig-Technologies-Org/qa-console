@@ -7,10 +7,6 @@
         {
             "path": "/api/cron/cleanup-videos",
             "schedule": "0 3 * * *"
-        },
-        {
-            "path": "/api/cron/embed-failures",
-            "schedule": "*/30 * * * *"
         }
     ]
 }
