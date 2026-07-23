@@ -1,8 +1,8 @@
 'use client';
 
-import React from "react";
+import React, { useId } from "react";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { chatChartKind } from "@/lib/chat-chart-types";
+import { chatChartKind, chatChartColor, chatStatusSliceColor } from "@/lib/chat-chart-types";
 
 interface ChatChartProps {
   name: string;
@@ -18,7 +18,7 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 const GROUP_BY_LABELS: Record<string, string> = {
-  date: 'over time', spec_file: 'by spec file', browser: 'by browser', project: 'by project', test: 'by test',
+  date: 'over time', spec_file: 'by spec file', browser: 'by browser', project: 'by project', test: 'by test', status: 'by status',
 };
 
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#e11d48', '#0ea5e9', '#a855f7', '#84cc16', '#f97316'];
@@ -43,9 +43,11 @@ function ChartHeader({ result }: { result: any }) {
 /** Renders a get_chart_data result as an actual chart. Shape (line/bar/pie) is decided by chatChartKind — never by the model. */
 export function ChatChart({ name, args, result }: ChatChartProps) {
   const kind = chatChartKind(name, args);
+  const gradientId = useId();
   if (!kind || result?.error || !Array.isArray(result?.series) || result.series.length === 0) return null;
 
   const metricLabel = METRIC_LABELS[result.metric] || result.metric;
+  const color = chatChartColor(args); // green for passed data, red for failed, neutral otherwise — decided by code from args, not the model
 
   let chart: React.ReactNode;
   let height = 200;
@@ -54,9 +56,9 @@ export function ChatChart({ name, args, result }: ChatChartProps) {
     chart = (
       <AreaChart data={result.series}>
         <defs>
-          <linearGradient id="chatTrendGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
@@ -66,15 +68,18 @@ export function ChatChart({ name, args, result }: ChatChartProps) {
           contentStyle={{ fontSize: 11, background: 'var(--card)', border: '1px solid var(--border)' }}
           formatter={(value: any) => [value, metricLabel]}
         />
-        <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} fill="url(#chatTrendGrad)" />
+        <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} fill={`url(#${gradientId})`} />
       </AreaChart>
     );
   } else if (kind === 'pie') {
     height = 220;
+    const isStatusPie = result.group_by === 'status';
     chart = (
       <PieChart>
         <Pie data={result.series} dataKey="value" nameKey="label" cx="50%" cy="45%" innerRadius={40} outerRadius={65} paddingAngle={3} stroke="none">
-          {result.series.map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+          {result.series.map((s: any, i: number) => (
+            <Cell key={i} fill={isStatusPie ? chatStatusSliceColor(s.label) : PIE_COLORS[i % PIE_COLORS.length]} />
+          ))}
         </Pie>
         <Tooltip contentStyle={{ fontSize: 11, background: 'var(--card)', border: '1px solid var(--border)' }} />
         <Legend iconType="circle" verticalAlign="bottom" wrapperStyle={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }} />
@@ -87,7 +92,7 @@ export function ChatChart({ name, args, result }: ChatChartProps) {
         <XAxis dataKey="label" tick={{ fontSize: 8, fill: 'var(--muted)' }} angle={-25} textAnchor="end" axisLine={false} tickLine={false} interval={0} />
         <YAxis allowDecimals={false} tick={{ fontSize: 9, fill: 'var(--muted)' }} axisLine={false} tickLine={false} width={30} />
         <Tooltip contentStyle={{ fontSize: 11, background: 'var(--card)', border: '1px solid var(--border)' }} formatter={(value: any) => [value, metricLabel]} />
-        <Bar dataKey="value" fill="#e11d48" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} />
       </BarChart>
     );
   }

@@ -173,7 +173,7 @@ async function getFlakyTestsSummary({ organizationId, project_name, limit }: { o
 }
 
 type ChartMetric = 'pass_rate' | 'failure_count' | 'avg_duration' | 'test_count';
-type ChartGroupBy = 'date' | 'spec_file' | 'browser' | 'project' | 'test';
+type ChartGroupBy = 'date' | 'spec_file' | 'browser' | 'project' | 'test' | 'status';
 type StatusFilter = 'all' | 'passed' | 'failed' | 'skipped';
 
 /**
@@ -247,6 +247,7 @@ async function getChartData({ organizationId, project_name, build_id, metric, gr
       else if (group_by === 'spec_file') key = row.specFile;
       else if (group_by === 'browser') key = t.project || 'unknown';
       else if (group_by === 'test') key = t.title || 'Untitled test';
+      else if (group_by === 'status') key = t.status || 'UNKNOWN';
       else key = projectNames[row.projectId] || `Project ${row.projectId}`;
 
       const bucket = buckets.get(key) ?? { total: 0, passed: 0, failed: 0, durationSum: 0 };
@@ -372,19 +373,22 @@ export const TOOL_DECLARATIONS = [
     description: 'Get chart-ready data for any visualization/chart/graph/plot request. Choose a metric ' +
       '(what to measure) and group_by (how to bucket it) to cover things like "pass rate over time", ' +
       '"failures by spec file", "test count by browser", "average duration by project", "duration per ' +
-      'individual test", etc. Use group_by=test for anything about individual tests (e.g. "time taken for ' +
-      'each failed test" → metric=avg_duration, group_by=test, status_filter=failed). To scope to ONE ' +
-      'specific build (e.g. "in build 240003" or "for this build") pass build_id instead of project_name/' +
-      'days — build_id takes priority and ignores the date window entirely. The dashboard renders the ' +
-      'result as an actual chart automatically — reply afterward with just a short caption.',
+      'individual test", "pass vs failed pie chart", etc. Use group_by=test for anything about individual ' +
+      'tests (e.g. "time taken for each failed test" → metric=avg_duration, group_by=test, ' +
+      'status_filter=failed). Use group_by=status (with metric=test_count, leave status_filter=all) for a ' +
+      'pass/failed/skipped breakdown pie chart — do NOT try to combine two separate status_filter calls or ' +
+      'invent another way to show pass-vs-fail, group_by=status already does exactly that in one call. To ' +
+      'scope to ONE specific build (e.g. "in build 240003" or "for this build") pass build_id instead of ' +
+      'project_name/days — build_id takes priority and ignores the date window entirely. The dashboard ' +
+      'renders the result as an actual chart automatically — reply afterward with just a short caption.',
     parameters: {
       type: 'OBJECT',
       properties: {
         project_name: { type: 'STRING', description: 'Project name to scope to (omit for all projects combined). Ignored if build_id is set.' },
         build_id: { type: 'NUMBER', description: 'Scope to exactly one build by its numeric ID, instead of a project + date window.' },
         metric: { type: 'STRING', enum: ['pass_rate', 'failure_count', 'avg_duration', 'test_count'], description: 'What to measure' },
-        group_by: { type: 'STRING', enum: ['date', 'spec_file', 'browser', 'project', 'test'], description: 'How to bucket the data — use "test" to chart individual tests' },
-        status_filter: { type: 'STRING', enum: ['all', 'passed', 'failed', 'skipped'], description: 'Restrict to tests with this final status, default all. Use "failed" for e.g. "each failed test".' },
+        group_by: { type: 'STRING', enum: ['date', 'spec_file', 'browser', 'project', 'test', 'status'], description: 'How to bucket the data — "test" for individual tests, "status" for a pass/failed/skipped pie' },
+        status_filter: { type: 'STRING', enum: ['all', 'passed', 'failed', 'skipped'], description: 'Restrict to tests with this final status, default all. Use "failed" for e.g. "each failed test" — but leave as "all" when group_by=status.' },
         days: { type: 'NUMBER', description: 'Lookback window in days, default 30, max 90. Ignored if build_id is set.' },
       },
       required: ['metric', 'group_by'],
