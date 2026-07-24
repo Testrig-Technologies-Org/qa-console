@@ -19,12 +19,12 @@ export function TestCaseRow({ tc, expandedId, setExpandedId, editingId, setEditi
           <div className="flex-1 truncate">
             {isEditing ? (
               <input className="bg-background border border-border p-1 text-xs w-full text-foreground" value={editForm.title} onClick={e => e.stopPropagation()} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
-            ) : <span className="text-[11px] font-bold text-foreground uppercase truncate">{tc.title}</span>}
+            ) : <span className="text-[11px] font-bold text-foreground truncate">{tc.title}</span>}
           </div>
         </div>
 
         <div className="flex items-center gap-6">
-          <span className="text-[9px] font-black text-muted uppercase tracking-widest">{tc.mode}</span>
+          <span className="text-[9px] font-black text-muted tracking-wide">{tc.mode}</span>
           <div className="flex gap-1">
             {isEditing ? (
               <>
@@ -44,11 +44,11 @@ export function TestCaseRow({ tc, expandedId, setExpandedId, editingId, setEditi
       {isExpanded && (
         <div className="p-10 bg-card border-l-2 border-indigo-500/50 grid grid-cols-2 gap-10 border-y border-border">
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2"><Command size={10} /> Instructions</p>
+            <p className="text-[10px] font-black text-muted tracking-wide flex items-center gap-2"><Command size={10} /> Instructions</p>
             {isEditing ? <textarea className="w-full bg-background border border-border p-4 font-mono text-[11px] h-48 text-foreground" value={editForm.steps} onChange={e => setEditForm({ ...editForm, steps: e.target.value })} /> : <div className="p-5 bg-background border border-border min-h-[12rem]">{renderIndexedContent(tc.steps, "text-indigo-500")}</div>}
           </div>
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2"><Zap size={10} /> Expected_Outcome</p>
+            <p className="text-[10px] font-black text-muted tracking-wide flex items-center gap-2"><Zap size={10} /> Expected_Outcome</p>
             {isEditing ? <textarea className="w-full bg-background border border-border p-4 font-mono text-[11px] h-48 text-foreground" value={editForm.expectedResult} onChange={e => setEditForm({ ...editForm, expectedResult: e.target.value })} /> : <div className="p-5 bg-background border border-border min-h-[12rem]">{renderIndexedContent(tc.expectedResult, "text-emerald-500")}</div>}
           </div>
         </div>

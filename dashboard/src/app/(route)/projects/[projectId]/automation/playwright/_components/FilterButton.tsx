@@ -34,7 +34,7 @@ export function FilterButton({ active, label, count, onClick, color }: any) {
     <button 
       onClick={onClick} 
       className={cn(
-        "px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 whitespace-nowrap shadow-sm duration-300",
+        "px-4 py-2 rounded-xl border text-[11px] font-black tracking-wide transition-all flex items-center gap-3 whitespace-nowrap shadow-sm duration-300",
         colorClasses[color]
       )}
     >

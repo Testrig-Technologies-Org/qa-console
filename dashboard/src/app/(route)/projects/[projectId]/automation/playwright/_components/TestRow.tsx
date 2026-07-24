@@ -70,8 +70,8 @@ function MetaBox({ icon, label, value }: any) {
     <div className="bg-card border border-border p-3 rounded-2xl flex items-center gap-3 hover:bg-muted/5 transition-all">
       <div className="text-muted">{React.cloneElement(icon, { size: 14 })}</div>
       <div>
-        <p className="text-[8px] font-black text-muted uppercase leading-none mb-1">{label}</p>
-        <p className="text-xs font-bold text-foreground uppercase truncate max-w-[120px]">{value || '---'}</p>
+        <p className="text-[8px] font-black text-muted leading-none mb-1">{label}</p>
+        <p className="text-xs font-bold text-foreground truncate max-w-[120px]">{value || '---'}</p>
       </div>
     </div>
   );
@@ -116,7 +116,7 @@ function StepItem({ step, depth }: { step: any; depth: number }) {
         <div className="flex items-center gap-3 shrink-0 ml-4">
           <span className="text-[9px] font-mono text-muted/60">{step.duration_ms || step.duration || 0}ms</span>
           {step.category && (
-            <span className="text-[7px] font-black bg-muted/10 text-muted px-1.5 py-0.5 rounded uppercase tracking-tighter">
+            <span className="text-[7px] font-black bg-muted/10 text-muted px-1.5 py-0.5 rounded tracking-tighter">
               {step.category}
             </span>
           )}
@@ -165,31 +165,31 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
           
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[8px] font-black bg-muted/20 text-muted px-1.5 py-0.5 rounded tracking-widest uppercase">
+              <span className="text-[8px] font-black bg-muted/20 text-muted px-1.5 py-0.5 rounded tracking-wide">
                 Run {test?.run_number || 1}
               </span>
               {test?.status === 'running' && (
                 stale ? (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-amber-500/10 text-amber-600 dark:text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">
+                  <span className="flex items-center gap-1 text-[8px] font-black bg-amber-500/10 text-amber-600 dark:text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 tracking-wide">
                     Stalled — No Update
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase tracking-widest animate-pulse">
+                  <span className="flex items-center gap-1 text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20 tracking-wide animate-pulse">
                      Active Stream
                   </span>
                 )
               )}
               {hasLogs && (
-                <span className="flex items-center gap-1 text-[8px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest">
+                <span className="flex items-center gap-1 text-[8px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 tracking-wide">
                   <Terminal size={10} /> Logs
                 </span>
               )}
               {videoUrl && (
-                <span className="flex items-center gap-1 text-[8px] font-black bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/20 uppercase tracking-widest">
+                <span className="flex items-center gap-1 text-[8px] font-black bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/20 tracking-wide">
                   <Video size={10} /> Video
                 </span>
               )}
-              <span className="text-[9px] font-mono text-muted uppercase ml-1 opacity-50 truncate max-w-[200px]">
+              <span className="text-[9px] font-mono text-muted ml-1 opacity-50 truncate max-w-[200px]">
                 {test?.specFile || test?.spec_file || test?.test_entry?.file?.split(/[\\/]/).pop() || ''}
               </span>
             </div>
@@ -200,7 +200,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
         </div>
         <div className="flex items-center gap-4">
           {isLoadingLogs && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
-          <span className="text-[10px] font-mono text-muted uppercase">{durationDisplay}</span>
+          <span className="text-[10px] font-mono text-muted">{durationDisplay}</span>
           {isExpanded ? <ChevronDown className="w-5 h-5 text-muted" /> : <ChevronRight className="w-5 h-5 text-muted group-hover:text-foreground" />}
         </div>
       </button>
@@ -221,7 +221,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
           {/* Steps Timeline */}
           {steps.length > 0 && (
             <div className="ml-12 space-y-4">
-               <button onClick={() => setStepsExpanded(!stepsExpanded)} className="flex items-center gap-2 text-muted uppercase text-[10px] font-black tracking-widest hover:text-foreground">
+               <button onClick={() => setStepsExpanded(!stepsExpanded)} className="flex items-center gap-2 text-muted text-[10px] font-black tracking-wide hover:text-foreground">
                  {stepsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                  <ListTree size={14} /> Execution Timeline ({steps.length})
                </button>
@@ -238,7 +238,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
               will never produce another frame, so a spinner here would just mislead. */}
           {test?.status === 'running' && !stale && (
             <div className="ml-12 space-y-3 max-w-xl">
-              <div className="flex items-center gap-2 px-1 text-indigo-600 dark:text-indigo-400 font-black text-[10px] uppercase tracking-widest">
+              <div className="flex items-center gap-2 px-1 text-indigo-600 dark:text-indigo-400 font-black text-[10px] tracking-wide">
                 <Monitor size={16} className="animate-pulse" /> Live View
               </div>
               {liveFrame ? (
@@ -266,7 +266,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
             <div className="ml-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {videoUrl && (
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between px-1 text-muted font-black text-[10px] uppercase tracking-widest">
+                        <div className="flex items-center justify-between px-1 text-muted font-black text-[10px] tracking-wide">
                            <div className="flex items-center gap-2"><Video size={16} /> Recording</div>
                            <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">
                              <ExternalLink size={12} />
@@ -279,7 +279,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
                 )}
                 {screenshotUrl && (
                     <div className="space-y-3">
-                        <div className="text-muted font-black text-[10px] uppercase tracking-widest px-1 flex items-center gap-2">
+                        <div className="text-muted font-black text-[10px] tracking-wide px-1 flex items-center gap-2">
                            <Monitor size={16} /> Failure Trace
                         </div>
                         <img 
@@ -296,7 +296,7 @@ export function TestRow({ test, buildId, isExpanded, onToggle, isLoadingLogs, li
           {/* Final Error Trace */}
           {error && (
             <div className="ml-12 space-y-3">
-              <div className="flex items-center gap-2 text-rose-500/70 text-[10px] font-black uppercase tracking-widest px-1">
+              <div className="flex items-center gap-2 text-rose-500/70 text-[10px] font-black tracking-wide px-1">
                 <Terminal size={16} /> Final Error
               </div>
               <div className="p-6 bg-rose-500/5 border border-rose-500/10 rounded-[2rem]">

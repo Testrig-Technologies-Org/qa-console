@@ -97,7 +97,7 @@ export function ImportTestCaseTool({
           )}
         </div>
 
-        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+        <span className="text-[10px] font-black tracking-wide text-foreground">
           {loading ? "UPLOADING..." : "Import"}
         </span>
 

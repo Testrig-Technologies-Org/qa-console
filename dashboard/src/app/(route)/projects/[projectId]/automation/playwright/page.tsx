@@ -310,10 +310,10 @@ function PlaywrightDashboardContent() {
   }, [trendData, currentStats]);
 
   const pieData = useMemo(() => [
-    { name: 'FAILED', value: currentStats.failed, color: '#ef4444' },
-    { name: 'PASSED', value: currentStats.passed, color: '#10b981' },
-    { name: 'RUNNING', value: currentStats.running, color: '#3b82f6' },
-    { name: 'SKIPPED', value: currentStats.skipped, color: '#f59e0b' }
+    { name: 'Failed', value: currentStats.failed, color: '#ef4444' },
+    { name: 'Passed', value: currentStats.passed, color: '#10b981' },
+    { name: 'Running', value: currentStats.running, color: '#3b82f6' },
+    { name: 'Skipped', value: currentStats.skipped, color: '#f59e0b' }
   ].filter(d => d.value > 0), [currentStats]);
 
   if (loading) return (
@@ -329,9 +329,9 @@ function PlaywrightDashboardContent() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted">
                <Command size={14} />
-               <span className="text-[10px] font-bold uppercase tracking-widest">Analytics / Playwright Console</span>
+               <span className="text-[10px] font-bold tracking-wide">Analytics / Playwright Console</span>
             </div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-3 uppercase">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-3">
               {showAnalysis ? 'Intelligence Analysis' : 'Playwright Command Center'}
             </h1>
             <div className="flex items-center gap-3 mt-2">
@@ -339,21 +339,21 @@ function PlaywrightDashboardContent() {
                   {analysis.improve ? <ArrowUpRight size={10} className="inline mr-1"/> : <ArrowDownRight size={10} className="inline mr-1"/>}
                   {Math.abs(analysis.diff)}% {analysis.improve ? 'HEALTH_GAIN' : 'REGRESSION'}
                </div>
-               <span className="text-muted text-[9px] font-bold uppercase tracking-widest font-mono opacity-50">stability_baseline: {analysis.hRate}%</span>
+               <span className="text-muted text-[9px] font-bold tracking-wide font-mono opacity-50">stability_baseline: {analysis.hRate}%</span>
             </div>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => setShowAnalysis(!showAnalysis)} 
               className={cn(
-                "px-4 py-2 border rounded-sm text-[10px] font-black transition-all uppercase tracking-widest flex items-center gap-2",
+                "px-4 py-2 border rounded-sm text-[10px] font-black transition-all tracking-wide flex items-center gap-2",
                 showAnalysis ? "bg-foreground text-background border-foreground shadow-xl" : "bg-card border-border text-muted hover:text-foreground"
               )}
             >
               {showAnalysis ? <X size={12} /> : <Sparkles size={12} />}
               {showAnalysis ? 'Exit Intelligence' : 'Run Intelligence'}
             </button>
-            <button onClick={() => setIsShared(!isShared)} className="px-4 py-2 bg-card border border-border rounded-sm text-muted text-[10px] font-bold hover:text-foreground transition-all uppercase tracking-widest flex items-center gap-2">
+            <button onClick={() => setIsShared(!isShared)} className="px-4 py-2 bg-card border border-border rounded-sm text-muted text-[10px] font-bold hover:text-foreground transition-all tracking-wide flex items-center gap-2">
               {isShared ? <Unlock size={12} /> : <Lock size={12} />} {isShared ? 'Shared Access' : 'Private Instance'}
             </button>
           </div>
@@ -377,7 +377,7 @@ function PlaywrightDashboardContent() {
               <div className="xl:col-span-2 bg-card border border-border rounded-sm shadow-sm flex flex-col">
                 <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center gap-3">
                   <TrendingUp size={14} className="text-emerald-500" />
-                  <h2 className="text-[10px] font-black text-foreground uppercase tracking-widest">Execution Analytics</h2>
+                  <h2 className="text-[10px] font-black text-foreground tracking-wide">Execution Analytics</h2>
                 </div>
                 <div className="h-[250px] w-full p-6">
                   <ResponsiveContainer width="100%" height="100%">
@@ -395,19 +395,19 @@ function PlaywrightDashboardContent() {
               <div className="bg-card border border-border rounded-sm shadow-sm flex flex-col items-center">
                 <div className="w-full px-6 py-4 border-b border-border bg-muted/5 flex items-center gap-3">
                   <PieChartIcon size={14} className="text-indigo-500" />
-                  <h2 className="text-[10px] font-black text-foreground uppercase tracking-widest">Status Matrix</h2>
+                  <h2 className="text-[10px] font-black text-foreground tracking-wide">Status Matrix</h2>
                 </div>
                 <div className="flex-1 w-full min-h-[200px] relative flex items-center justify-center">
                    <div className="absolute flex flex-col items-center justify-center pointer-events-none pb-4">
                       <span className="text-3xl font-bold text-foreground font-mono">{currentStats.total}</span>
-                      <span className="text-[8px] font-bold text-muted uppercase tracking-widest">Tests</span>
+                      <span className="text-[8px] font-bold text-muted tracking-wide">Tests</span>
                    </div>
                    <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={75} paddingAngle={8} dataKey="value" stroke="none">
                          {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                        </Pie>
-                       <Legend iconType="circle" verticalAlign="bottom" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: isDark ? '#a1a1aa' : '#71717a'}} />
+                       <Legend iconType="circle" verticalAlign="bottom" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold', color: isDark ? '#a1a1aa' : '#71717a'}} />
                      </PieChart>
                    </ResponsiveContainer>
                 </div>
@@ -440,7 +440,7 @@ function PlaywrightDashboardContent() {
                   <div className="px-6 py-4 border-b border-border bg-muted/5 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <Cpu size={14} className="text-indigo-500" />
-                      <span className="text-xs font-bold text-foreground uppercase tracking-widest font-mono">{project}</span>
+                      <span className="text-xs font-bold text-foreground tracking-wide font-mono">{project}</span>
                     </div>
                     <ProjectLevelStats tests={tests} />
                   </div>
@@ -479,9 +479,9 @@ function StatCard({ title, value, sub, icon, pulse, color }: any) {
         <div className="text-muted group-hover:text-foreground transition-colors">{icon}</div>
         {pulse && <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />}
       </div>
-      <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">{title}</h3>
+      <h3 className="text-[10px] font-bold text-muted tracking-wide mb-1">{title}</h3>
       <div className="text-4xl font-bold text-foreground tracking-tighter font-mono">{value ?? '0'}</div>
-      <p className="text-[9px] text-muted font-bold mt-3 uppercase tracking-widest">{sub}</p>
+      <p className="text-[9px] text-muted font-bold mt-3 tracking-wide">{sub}</p>
     </div>
   );
 }

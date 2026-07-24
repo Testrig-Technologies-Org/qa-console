@@ -34,7 +34,7 @@ export function DistributionPie({ metrics, isDark }: { metrics: any, isDark: boo
         
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-xl font-bold font-mono text-foreground">{metrics.rate}%</span>
-          <span className="text-[7px] font-black text-muted uppercase tracking-widest">Bot ROI</span>
+          <span className="text-[7px] font-black text-muted tracking-wide">Bot ROI</span>
         </div>
       </div>
     </div>

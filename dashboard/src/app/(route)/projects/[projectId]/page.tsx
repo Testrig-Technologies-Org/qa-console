@@ -25,7 +25,7 @@ export default function ProjectSelectionPage() {
     <div className="p-8 space-y-8 font-mono bg-background min-h-screen transition-colors duration-300">
       {/* 1. HEADER & BREADCRUMBS */}
       <header className="space-y-4">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-[0.2em]">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-muted tracking-wide">
           <Server size={12} />
           <span>Infrastructure</span>
           <span className="opacity-30">/</span>
@@ -38,7 +38,7 @@ export default function ProjectSelectionPage() {
           <div className="w-10 h-10 bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
             <Command size={22} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tighter uppercase leading-none">Resource Control</h1>
+          <h1 className="text-2xl font-bold text-foreground tracking-tighter leading-none">Resource Control</h1>
         </div>
       </header>
 
@@ -77,7 +77,7 @@ export default function ProjectSelectionPage() {
       {/* 3. SYSTEM METADATA FOOTER */}
       <div className="flex items-center gap-4 pt-4">
          <div className="h-[1px] flex-1 bg-border" />
-         <span className="text-[9px] font-black text-muted uppercase tracking-[0.3em] opacity-40">Project_ID: {projectId}</span>
+         <span className="text-[9px] font-black text-muted tracking-wide opacity-40">Project_ID: {projectId}</span>
          <div className="h-[1px] flex-1 bg-border" />
       </div>
     </div>
@@ -100,24 +100,22 @@ function SelectionCard({ href, title, sub, icon, color, badge }: any) {
         <div className="text-muted group-hover:text-foreground transition-colors">
           {icon}
         </div>
-        <span className="text-[8px] font-black px-1.5 py-0.5 border border-border bg-background/50 text-muted uppercase tracking-widest">
+        <span className="text-[8px] font-black px-1.5 py-0.5 border border-border bg-background/50 text-muted tracking-wide">
           {badge}
         </span>
       </div>
 
       {/* Middle row */}
       <div className="mt-4">
-        <p className="text-[9px] font-bold text-muted uppercase tracking-[0.2em] mb-1">{sub}</p>
-        <h2 className="text-xl font-bold text-foreground uppercase tracking-tight group-hover:text-indigo-500 transition-colors">
+        <p className="text-[9px] font-bold text-muted tracking-wide mb-1">{sub}</p>
+        <h2 className="text-xl font-bold text-foreground tracking-tight group-hover:text-indigo-500 transition-colors">
           {title}
         </h2>
       </div>
 
       {/* Bottom row */}
       <div className="flex items-center justify-between pt-4 border-t border-border/50 mt-4">
-        <span className="text-[9px] font-black text-muted uppercase tracking-[0.2em] group-hover:text-foreground/60 transition-colors">
-           Access_Module
-        </span>
+        <span className="text-[9px] font-black text-muted tracking-wide group-hover:text-foreground/60 transition-colors">Access Module</span>
         <div className="w-7 h-7 flex items-center justify-center border border-border bg-card group-hover:bg-foreground group-hover:border-foreground transition-all">
             <ChevronRight size={14} className="text-muted group-hover:text-background" />
         </div>

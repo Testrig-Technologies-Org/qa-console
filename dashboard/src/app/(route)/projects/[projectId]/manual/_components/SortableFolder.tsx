@@ -19,7 +19,7 @@ export function SortableFolder({ name, node, onToggle, expandedModules, ...props
           <div onClick={() => onToggle(node._path)} className="flex items-center gap-3 cursor-pointer select-none">
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             <Folder size={16} className={cn(isExpanded ? "text-indigo-500" : "text-muted")} />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{name}</span>
+            <span className="text-[11px] font-bold tracking-wide text-foreground">{name}</span>
           </div>
         </div>
       </div>

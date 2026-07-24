@@ -127,9 +127,9 @@ export default function Overview() {
         <div>
           <div className="flex items-center gap-2 text-muted mb-2">
              <Server size={12} />
-             <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Infrastructure / Analytics / {activeProjectId === 'all' ? 'Global' : 'Scoped'}</span>
+             <span className="text-[10px] font-bold tracking-wide">Infrastructure / Analytics / {activeProjectId === 'all' ? 'Global' : 'Scoped'}</span>
           </div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-3 uppercase">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-3">
             <Command size={28} className="text-indigo-500" />
             Control Tower
           </h1>
@@ -137,23 +137,21 @@ export default function Overview() {
       </header>
 
       {/* PROJECT TABS */}
-      <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-none overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-lg overflow-x-auto scrollbar-hide">
         <button 
           onClick={() => setActiveProjectId('all')}
           className={cn(
-            "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-none",
+            "px-4 py-1.5 text-[10px] font-bold tracking-wide transition-all rounded-lg",
             activeProjectId === 'all' ? "bg-foreground text-background shadow-lg" : "text-muted hover:text-foreground"
           )}
-        >
-          Total_Registry
-        </button>
+        >Total Registry</button>
         <div className="w-px h-4 bg-border mx-2" />
         {projectsList.map((project) => (
           <button 
             key={project.id}
             onClick={() => setActiveProjectId(project.id)}
             className={cn(
-              "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-none whitespace-nowrap",
+              "px-4 py-1.5 text-[10px] font-bold tracking-wide transition-all rounded-lg whitespace-nowrap",
               activeProjectId === project.id ? "bg-muted/20 text-foreground border border-border" : "text-muted hover:text-foreground"
             )}
           >
@@ -178,9 +176,9 @@ export default function Overview() {
 
       {/* RECENT ACTIVITY & PROGRESS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-20">
-        <div className="lg:col-span-2 bg-card border border-border rounded-none shadow-sm flex flex-col">
-            <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center justify-between uppercase">
-                <h2 className="text-xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+        <div className="lg:col-span-2 bg-card border border-border rounded-lg shadow-sm flex flex-col">
+            <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center justify-between">
+                <h2 className="text-xs font-bold text-foreground tracking-wide flex items-center gap-2">
                     <Activity size={14} className="text-muted" />
                     Latest Transmissions
                 </h2>
@@ -190,12 +188,12 @@ export default function Overview() {
                 {(filteredData?.builds || []).slice(0, 6).map((b: any) => (
                     <div key={b.id} className="flex items-center justify-between p-4 hover:bg-foreground/[0.02] transition-colors group cursor-pointer">
                         <div className="flex items-center gap-4">
-                            <div className={cn("w-1 h-8 rounded-none", 
+                            <div className={cn("w-1 h-8 rounded-lg", 
                                 b.type === 'playwright' ? "bg-emerald-500" : "bg-indigo-500")}>
                             </div>
                             <div>
                                 <h3 className="text-xs font-bold text-foreground font-mono">BUILD_REF_{b.id}</h3>
-                                <p className="text-[10px] text-muted uppercase mt-0.5 font-bold tracking-tighter">
+                                <p className="text-[10px] text-muted mt-0.5 font-bold tracking-tighter">
                                   {b.type} • {b.environment} • {new Date(b.createdAt).toLocaleTimeString()}
                                 </p>
                             </div>
@@ -209,14 +207,14 @@ export default function Overview() {
             </div>
         </div>
 
-        <div className="bg-card border border-border rounded-none shadow-sm flex flex-col items-center justify-center p-10">
-            <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em] mb-4">Coverage_Velocity</p>
+        <div className="bg-card border border-border rounded-lg shadow-sm flex flex-col items-center justify-center p-10">
+            <p className="text-[10px] font-black text-muted tracking-wide mb-4">Coverage Velocity</p>
             <div className="text-7xl font-bold text-foreground tracking-tighter font-mono">{metrics?.coverage || 0}%</div>
             <div className="w-full space-y-4 mt-6">
-                <div className="h-1.5 w-full bg-border rounded-none overflow-hidden">
+                <div className="h-1.5 w-full bg-border rounded-lg overflow-hidden">
                     <div className="h-full bg-indigo-500 transition-all duration-1000 shadow-[0_0_15px_rgba(99,102,241,0.5)]" style={{ width: `${metrics?.coverage || 0}%` }} />
                 </div>
-                <div className="flex justify-between text-[9px] font-bold text-muted uppercase tracking-widest">
+                <div className="flex justify-between text-[9px] font-bold text-muted tracking-wide">
                     <span>Synchronized</span>
                     <span>Target: 100%</span>
                 </div>
@@ -232,9 +230,9 @@ export default function Overview() {
 function ChartContainer({ title, data, color, gradientId, theme }: any) {
   const isDark = theme === 'dark';
   return (
-    <div className="bg-card border border-border rounded-none shadow-sm flex flex-col overflow-hidden">
+    <div className="bg-card border border-border rounded-lg shadow-sm flex flex-col overflow-hidden">
       <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center justify-between">
-          <h2 className="text-[10px] font-black text-muted tracking-widest uppercase">{title}</h2>
+          <h2 className="text-[10px] font-black text-muted tracking-wide">{title}</h2>
           <div className="w-2 h-2 rounded-full bg-border" />
       </div>
       <div className="h-[250px] w-full p-6">
@@ -271,16 +269,16 @@ function StatCard({ title, value, sub, icon, pulse, color }: any) {
 
   return (
     <div className={cn(
-      "bg-card border border-border border-t-2 rounded-none p-8 shadow-sm hover:bg-muted/5 transition-all duration-300 group",
+      "bg-card border border-border border-t-2 rounded-lg p-8 shadow-sm hover:bg-muted/5 transition-all duration-300 group",
       accentColors[color]
     )}>
       <div className="flex justify-between items-center mb-6">
         <div className="text-muted group-hover:text-foreground transition-colors">{icon}</div>
         {pulse && <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />}
       </div>
-      <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">{title}</h3>
+      <h3 className="text-[10px] font-bold text-muted tracking-wide mb-1">{title}</h3>
       <div className="text-4xl font-bold text-foreground tracking-tighter font-mono leading-none">{value ?? '0'}</div>
-      <p className="text-[9px] text-muted font-bold mt-3 uppercase italic tracking-widest">{sub}</p>
+      <p className="text-[9px] text-muted font-bold mt-3 italic tracking-wide">{sub}</p>
     </div>
   );
 }

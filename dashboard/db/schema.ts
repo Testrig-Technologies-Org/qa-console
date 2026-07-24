@@ -233,6 +233,24 @@ export const pinnedCharts = mysqlTable('pinned_charts', {
   projectIdx: index('pinned_charts_project_idx').on(table.projectId),
 }));
 
+// 13. CHAT MESSAGES (Run Intelligence — persisted Ask_Intelligence conversation history, scoped
+// per user per project, so it survives a page reload instead of resetting every visit).
+export const chatMessages = mysqlTable('chat_messages', {
+  id: int('id').primaryKey().autoincrement(),
+  organizationId: varchar('organization_id', { length: 255 }).references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  projectId: int('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id).notNull(),
+  role: varchar('role', { length: 10 }).notNull(), // 'user' | 'assistant'
+  text: text('text').notNull(),
+  question: text('question'), // for an assistant message: the user question it answered, needed for feedback after reload
+  toolCalls: json('tool_calls'), // { name, args, result }[] — only set on assistant messages that called a tool
+  error: int('error').default(0).notNull(), // 0/1 — assistant message represents a failure, not a real answer
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  orgIdx: index('chat_messages_org_idx').on(table.organizationId),
+  userProjectIdx: index('chat_messages_user_project_idx').on(table.userId, table.projectId),
+}));
+
 /* -------------------- RELATIONS -------------------- */
 
 // Users Relations

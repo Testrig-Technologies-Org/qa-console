@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 
 /* ---------------- ✅ HELPER COMPONENT (FIX) ---------------- */
 const RenderIndexedContent = ({ text, colorClass }: { text: string; colorClass: string }) => {
-  if (!text) return <span className="opacity-20 font-mono text-[9px] uppercase tracking-widest italic leading-none">Data_Null</span>;
+  if (!text) return <span className="opacity-20 font-mono text-[9px] tracking-wide italic leading-none">Data Null</span>;
   return (
     <div className="space-y-1.5">
       {text.split('\n').filter(l => l.trim() !== '').map((line, idx) => (
@@ -196,14 +196,14 @@ export default function TestCaseManager() {
       <header className="flex justify-between items-center border-b border-border pb-6">
         <div className="flex items-center gap-3">
           <Database className="text-indigo-500" size={28} />
-          <h1 className="text-3xl font-bold uppercase tracking-tighter leading-none">Requirement Tree</h1>
+          <h1 className="text-3xl font-bold tracking-tighter leading-none">Requirement Tree</h1>
         </div>
 
         <div className="flex gap-3 items-center">
           <ImportTestCaseTool projectId={Number(projectId)} onRefresh={loadData} />
           <button
             onClick={() => setIsAddingModule(!isAddingModule)}
-            className="bg-indigo-600 text-white px-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-sm hover:opacity-90 transition-all flex items-center gap-2"
+            className="bg-indigo-600 text-white px-4 py-3 text-[10px] font-black tracking-wide rounded-sm hover:opacity-90 transition-all flex items-center gap-2"
           >
             {isAddingModule ? <X size={14}/> : <FolderPlus size={14} />}
             {isAddingModule ? 'Abort' : 'New_Module'}
@@ -224,10 +224,8 @@ export default function TestCaseManager() {
           />
           <button
             onClick={handleCreateModule}
-            className="bg-indigo-600 text-white px-6 py-2 text-[10px] font-black uppercase tracking-widest"
-          >
-            Create_Object
-          </button>
+            className="bg-indigo-600 text-white px-6 py-2 text-[10px] font-black tracking-wide"
+          >Create Object</button>
         </div>
       )}
 

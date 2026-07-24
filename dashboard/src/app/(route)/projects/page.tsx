@@ -32,7 +32,7 @@ export default function ProjectsPage() {
     <div className="h-screen flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-        <span className="text-[10px] font-bold text-muted uppercase tracking-[0.3em]">Syncing_Registry...</span>
+        <span className="text-[10px] font-bold text-muted tracking-wide">Syncing Registry...</span>
       </div>
     </div>
   );
@@ -47,8 +47,8 @@ export default function ProjectsPage() {
             <Command size={28} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tighter uppercase leading-none">Project Registry</h1>
-            <p className="text-[10px] text-muted font-bold uppercase tracking-[0.3em] mt-2">
+            <h1 className="text-3xl font-bold text-foreground tracking-tighter leading-none">Project Registry</h1>
+            <p className="text-[10px] text-muted font-bold tracking-wide mt-2">
               Global Infrastructure • {data.length} Registered_Objects
             </p>
           </div>
@@ -56,7 +56,7 @@ export default function ProjectsPage() {
 
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all rounded-none shadow-xl"
+          className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background text-[11px] font-black tracking-wide hover:opacity-90 transition-all rounded-lg shadow-xl"
         >
           <Plus size={16} strokeWidth={3} />
           Register Project
@@ -73,7 +73,7 @@ export default function ProjectsPage() {
         {data.length === 0 && (
           <div className="col-span-full py-20 border border-dashed border-border flex flex-col items-center justify-center opacity-30">
             <Database size={40} className="mb-4 text-muted" />
-            <p className="text-xs uppercase font-bold tracking-widest text-muted">No Projects Found In Registry</p>
+            <p className="text-xs font-bold tracking-wide text-muted">No Projects Found In Registry</p>
           </div>
         )}
       </div>

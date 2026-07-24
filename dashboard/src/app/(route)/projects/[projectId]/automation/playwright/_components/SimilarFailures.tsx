@@ -32,7 +32,7 @@ export function SimilarFailures({ buildId, uniqueKey }: SimilarFailuresProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-muted text-[10px] font-bold uppercase tracking-widest">
+      <div className="flex items-center gap-2 text-muted text-[10px] font-bold tracking-wide">
         <Loader2 size={12} className="animate-spin" /> Scanning failure history...
       </div>
     );

@@ -72,10 +72,9 @@ export function ExecutiveKPIConsole({ buildData }: { buildData: any }) {
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-card border border-border p-6">
              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2 text-[10px] font-black text-foreground uppercase tracking-widest">
-                   <Activity size={14} className="text-emerald-500" /> Automation_Velocity_Stream
-                </div>
-                <span className="text-[9px] text-muted font-bold uppercase">Source: test_runs</span>
+                <div className="flex items-center gap-2 text-[10px] font-black text-foreground tracking-wide">
+                   <Activity size={14} className="text-emerald-500" />Automation Velocity Stream</div>
+                <span className="text-[9px] text-muted font-bold">Source: test runs</span>
              </div>
              <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -97,9 +96,8 @@ export function ExecutiveKPIConsole({ buildData }: { buildData: any }) {
 
         {/* 3. RISK HEAT-MAP */}
         <div className="lg:col-span-4 bg-card border border-border p-6 flex flex-col">
-            <div className="flex items-center gap-2 text-[10px] font-black text-foreground uppercase tracking-widest mb-6">
-                <AlertTriangle size={14} className="text-rose-500" /> Risk_Heat_Map
-            </div>
+            <div className="flex items-center gap-2 text-[10px] font-black text-foreground tracking-wide mb-6">
+                <AlertTriangle size={14} className="text-rose-500" />Risk Heat Map</div>
             
             <div className="flex-1 flex flex-col gap-1">
                 {[...Array(5)].map((_, r) => (
@@ -121,14 +119,14 @@ export function ExecutiveKPIConsole({ buildData }: { buildData: any }) {
                 ))}
             </div>
             
-            <div className="mt-4 flex justify-between items-center text-[8px] font-black text-muted uppercase tracking-tighter">
+            <div className="mt-4 flex justify-between items-center text-[8px] font-black text-muted tracking-tighter">
                 <span>Impact (Low → High)</span>
                 <span className="text-right">Probability</span>
             </div>
 
             <div className="mt-6 space-y-2 border-t border-border pt-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-muted font-bold uppercase">High_Risk_Area_Coverage</span>
+                    <span className="text-[9px] text-muted font-bold">High Risk Area Coverage</span>
                     <span className="text-[11px] text-foreground font-black">42%</span>
                 </div>
                 <div className="h-1 w-full bg-muted/20 overflow-hidden">
@@ -143,9 +141,9 @@ export function ExecutiveKPIConsole({ buildData }: { buildData: any }) {
       <div className="bg-card/50 border border-border px-6 py-2 flex justify-between items-center opacity-60">
          <div className="flex items-center gap-3">
             <Terminal size={12} className="text-foreground" />
-            <span className="text-[9px] font-black text-muted uppercase tracking-widest">KPI_Source_Validation: OK</span>
+            <span className="text-[9px] font-black text-muted tracking-wide">Kpi Source Validation: Ok</span>
          </div>
-         <span className="text-[9px] font-bold text-muted uppercase tracking-tighter">Instance: build_analysis_v4</span>
+         <span className="text-[9px] font-bold text-muted tracking-tighter">Instance: build analysis v4</span>
       </div>
 
     </div>
@@ -165,9 +163,9 @@ function KPIStat({ label, value, sub, icon, color }: any) {
                 <div className="text-muted group-hover:text-foreground transition-colors">{icon}</div>
                 <div className="w-1.5 h-1.5 bg-border group-hover:bg-foreground transition-colors rotate-45" />
             </div>
-            <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-[9px] font-black text-muted tracking-wide mb-1">{label}</p>
             <p className={cn("text-3xl font-black tabular-nums tracking-tighter leading-none", colors[color])}>{value}</p>
-            <p className="text-[8px] text-muted font-bold mt-3 uppercase tracking-tighter border-l border-border pl-2">{sub}</p>
+            <p className="text-[8px] text-muted font-bold mt-3 tracking-tighter border-l border-border pl-2">{sub}</p>
         </div>
     );
 }
@@ -178,11 +176,11 @@ function DataBlock({ label, value, sub, icon }: any) {
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-background border border-border text-muted group-hover:text-foreground">{icon}</div>
                 <div>
-                    <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-0.5">{label}</p>
-                    <p className="text-[14px] font-black text-foreground uppercase tracking-tight">{value}</p>
+                    <p className="text-[9px] font-black text-muted tracking-wide mb-0.5">{label}</p>
+                    <p className="text-[14px] font-black text-foreground tracking-tight">{value}</p>
                 </div>
             </div>
-            <span className="text-[8px] font-black text-muted uppercase tracking-tighter">{sub}</span>
+            <span className="text-[8px] font-black text-muted tracking-tighter">{sub}</span>
         </div>
     );
 }

@@ -115,21 +115,17 @@ export function BuildHistoryComparison({ projectId }: { projectId: number }) {
     const lineColor = isDark ? "#ffffff" : "#09090b";
 
     return (
-        <div className="bg-background border border-border font-mono shadow-2xl overflow-hidden mt-8 uppercase">
+        <div className="bg-background border border-border font-mono shadow-2xl overflow-hidden mt-8">
 
             {/* TOOLBAR */}
             <div className="px-6 py-4 border-b border-border bg-card flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <Gauge size={14} className="text-foreground" />
-                    <span className="text-[10px] font-black tracking-[0.2em] text-foreground">
-                        Cross_Build_Registry_Sync
-                    </span>
+                    <span className="text-[10px] font-black tracking-wide text-foreground">Cross Build Registry Sync</span>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-black tracking-widest text-muted-foreground">
-                        Depth_Window:
-                    </span>
+                    <span className="text-[9px] font-black tracking-wide text-muted-foreground">Depth Window:</span>
                     <div className="flex bg-muted border border-border p-0.5">
                         {[1, 2, 3, 4, 5].map(v => (
                             <button
@@ -152,9 +148,7 @@ export function BuildHistoryComparison({ projectId }: { projectId: number }) {
             {/* CHART */}
             <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-border">
                 <div className="lg:col-span-4 p-8 bg-muted/30 border-r border-border">
-                    <p className="text-[9px] font-black tracking-widest text-muted-foreground">
-                        Target_Node
-                    </p>
+                    <p className="text-[9px] font-black tracking-wide text-muted-foreground">Target Node</p>
                     <h3 className="text-[13px] font-black text-foreground truncate mt-1">
                         {focusedTestKey?.split("::")[1] || "PENDING_SELECTION"}
                     </h3>
@@ -212,9 +206,7 @@ export function BuildHistoryComparison({ projectId }: { projectId: number }) {
                 div, not the page, is the scrolling ancestor. */}
             <div className="relative max-h-[420px] overflow-auto">
                 {loading && (
-                    <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur flex items-center justify-center text-[11px] font-black tracking-widest text-foreground animate-pulse">
-                        established_data_handshake...
-                    </div>
+                    <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur flex items-center justify-center text-[11px] font-black tracking-wide text-foreground animate-pulse">established data handshake...</div>
                 )}
 
                 <table className="w-full border-collapse">
@@ -258,7 +250,7 @@ export function BuildHistoryComparison({ projectId }: { projectId: number }) {
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="opacity-10 text-[8px]">VOID</span>
+                                                <span className="opacity-10 text-[8px]">Void</span>
                                             )}
                                         </td>
                                     ))}
@@ -278,9 +270,7 @@ function DeltaBadge({ curr, prev }: { curr: number; prev: number }) {
     const pct = Math.abs(Math.round((diff / prev) * 100));
     if (pct < 2) {
         return (
-            <span className="text-[7px] font-black tracking-widest text-muted-foreground">
-                STABLE
-            </span>
+            <span className="text-[7px] font-black tracking-wide text-muted-foreground">Stable</span>
         );
     }
 

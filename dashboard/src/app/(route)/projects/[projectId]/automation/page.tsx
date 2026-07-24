@@ -67,7 +67,7 @@ export default function ProjectAutomationPage() {
     <div className="h-screen flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="animate-spin text-indigo-500 w-10 h-10" />
-        <span className="text-[10px] font-black text-muted uppercase tracking-[0.3em] animate-pulse">Establishing_Handshake...</span>
+        <span className="text-[10px] font-black text-muted tracking-wide animate-pulse">Establishing Handshake...</span>
       </div>
     </div>
   );
@@ -76,34 +76,32 @@ export default function ProjectAutomationPage() {
     <div className="p-8 space-y-8 font-mono bg-background min-h-screen transition-colors duration-300">
       {/* 1. HEADER & BREADCRUMBS */}
       <header className="space-y-4">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-[0.2em]">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-muted tracking-wide">
           <Server size={12} />
           <span>Infrastructure</span>
           <span className="opacity-30">/</span>
           <span>{project?.name?.replace(/ /g, '_') || 'PROJECT_ROOT'}</span>
           <span className="opacity-30">/</span>
-          <span className="text-foreground">Automation_Registry</span>
+          <span className="text-foreground">Automation Registry</span>
         </div>
 
         <div className="flex justify-between items-end border-b border-border pb-4">
             <div>
                 {/* Removed 'italic' class as requested */}
-                <h1 className="text-4xl font-bold text-foreground uppercase tracking-tighter">Instance History</h1>
-                <p className="text-[10px] text-muted mt-2 font-bold tracking-widest uppercase">
+                <h1 className="text-4xl font-bold text-foreground tracking-tighter">Instance History</h1>
+                <p className="text-[10px] text-muted mt-2 font-bold tracking-wide">
                   TYPE: <span className="text-indigo-500">{project?.type}</span> • UUID: {projectId}
                 </p>
             </div>
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-4 text-[10px] font-bold text-muted uppercase border border-border px-3 py-1 bg-card/50">
-                    Pipeline: <span className="text-emerald-500 ml-1">STABLE_CHANNEL</span>
+                <div className="flex items-center gap-4 text-[10px] font-bold text-muted border border-border px-3 py-1 bg-card/50">
+                    Pipeline: <span className="text-emerald-500 ml-1">Stable Channel</span>
                 </div>
                 <button
                   onClick={() => setCreateModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                  className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-[10px] font-black tracking-wide hover:opacity-90 transition-all shadow-xl"
                 >
-                  <GitMerge size={13} />
-                  Create_Build
-                </button>
+                  <GitMerge size={13} />Create Build</button>
             </div>
         </div>
       </header>
@@ -113,11 +111,11 @@ export default function ProjectAutomationPage() {
         <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <Activity size={14} className="text-indigo-500" />
-             <span className="text-[10px] font-black text-foreground uppercase tracking-widest">
+             <span className="text-[10px] font-black text-foreground tracking-wide">
                 Aggregated Execution Log
              </span>
           </div>
-          <span className="text-[9px] text-muted font-bold uppercase tracking-widest border border-border px-2 py-0.5">
+          <span className="text-[9px] text-muted font-bold tracking-wide border border-border px-2 py-0.5">
             Objects: {builds.length}
           </span>
         </div>
@@ -137,10 +135,10 @@ export default function ProjectAutomationPage() {
                 )} />
 
                 <div>
-                  <h3 className="text-sm font-bold text-foreground group-hover:text-indigo-500 transition-colors uppercase tabular-nums tracking-tight">
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-indigo-500 transition-colors tabular-nums tracking-tight">
                     Build_Reference_{b.id}
                   </h3>
-                  <div className="flex items-center gap-4 mt-1.5 text-[10px] text-muted font-bold uppercase tracking-widest">
+                  <div className="flex items-center gap-4 mt-1.5 text-[10px] text-muted font-bold tracking-wide">
                     <span className="flex items-center gap-1.5"><Calendar size={10} className="opacity-50"/> {new Date(b.createdAt).toLocaleDateString()}</span>
                     <span className="w-1 h-1 bg-border rounded-full" />
                     <span className="flex items-center gap-1.5"><Clock size={10} className="opacity-50"/> {b.environment}</span>
@@ -152,10 +150,9 @@ export default function ProjectAutomationPage() {
 
               <div className="flex items-center gap-12">
                 <div className="hidden md:block text-right">
-                    <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Architecture</p>
-                    <div className="flex items-center gap-1 text-muted font-bold text-[10px] uppercase tracking-tighter">
-                       <Shield size={10} className="opacity-40" /> x86_64 Stable
-                    </div>
+                    <p className="text-[8px] font-black text-muted tracking-wide mb-1">Architecture</p>
+                    <div className="flex items-center gap-1 text-muted font-bold text-[10px] tracking-tighter">
+                       <Shield size={10} className="opacity-40" />x86 64 Stable</div>
                 </div>
                 <StatusBadge status={b.status} />
                 <button
@@ -176,17 +173,15 @@ export default function ProjectAutomationPage() {
           {builds.length === 0 && (
             <div className="p-32 flex flex-col items-center justify-center text-center opacity-40">
               <Box size={32} className="text-muted mb-4" />
-              <div className="text-muted uppercase text-xs font-black tracking-[0.4em] animate-pulse">
-                Zero_Objects_Detected_In_Registry
-              </div>
+              <div className="text-muted text-xs font-black tracking-wide animate-pulse">Zero Objects Detected In Registry</div>
             </div>
           )}
         </div>
       </div>
 
       <footer className="flex justify-between items-center px-2 opacity-30 mt-auto">
-        <p className="text-[9px] text-muted font-bold uppercase tracking-widest underline">Auth_Node: Secure</p>
-        <p className="text-[9px] text-muted font-mono">Registry_Sync: Last_Check_Now</p>
+        <p className="text-[9px] text-muted font-bold tracking-wide underline">Auth Node: Secure</p>
+        <p className="text-[9px] text-muted font-mono">Registry Sync: Last Check Now</p>
       </footer>
 
       <CreateBuildModal

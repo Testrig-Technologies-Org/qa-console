@@ -156,29 +156,29 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
 
             {/* RUN INTELLIGENCE — charts pinned from the chat above, saved onto this project's dashboard. */}
             {buildData.projectId && (
-                <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden">
+                <div className="bg-background border border-border rounded-lg font-mono shadow-2xl overflow-hidden">
                     <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center gap-3">
                         <Terminal size={14} className="text-indigo-500" />
-                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Pinned_Charts</span>
+                        <span className="text-[10px] font-black text-foreground tracking-wide">Pinned Charts</span>
                     </div>
                     <PinnedCharts ref={pinnedChartsRef} projectId={Number(buildData.projectId)} />
                 </div>
             )}
 
-            <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden selection:bg-emerald-500/30">
+            <div className="bg-background border border-border rounded-lg font-mono shadow-2xl overflow-hidden selection:bg-emerald-500/30">
 
                 {/* HEADER */}
                 <div className="px-6 py-3 border-b border-border bg-card/50 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <Terminal size={14} className="text-emerald-600 dark:text-emerald-500" />
-                        <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Build_Intelligence_Protocol</span>
+                        <span className="text-[10px] font-black text-foreground tracking-wide">Build Intelligence Protocol</span>
                     </div>
                     <div className="flex items-center gap-3">
                         {buildData.status === 'running' && onStopBuild && (
                             <button
                                 onClick={handleStop}
                                 disabled={stopping}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-rose-500/20 bg-rose-500/5 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-rose-500/20 bg-rose-500/5 text-rose-600 dark:text-rose-500 text-[9px] font-black tracking-wide hover:bg-rose-500/10 transition-colors disabled:opacity-50"
                             >
                                 {stopping ? <Loader2 size={11} className="animate-spin" /> : <StopCircle size={11} />}
                                 {stopping ? 'Stopping...' : 'Stop Build'}
@@ -213,7 +213,7 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <span className="text-2xl font-black tabular-nums text-foreground leading-none">{stabilityIndex}%</span>
-                                <span className="text-[8px] text-muted font-bold uppercase mt-1">Stability</span>
+                                <span className="text-[8px] text-muted font-bold mt-1">Stability</span>
                             </div>
                         </div>
                         <div className="flex flex-col justify-center space-y-3 flex-1 overflow-hidden">
@@ -230,10 +230,9 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                         <div className="flex-[2] w-full space-y-1 border-l-2 border-rose-500/30 pl-4 bg-rose-500/[0.03] py-2">
                             <div className="flex justify-between items-start pr-4">
                                 <div className="flex flex-col overflow-hidden">
-                                    <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500 mb-1 font-black uppercase tracking-widest text-[9px]">
-                                        <TrendingDown size={12} className="animate-pulse" /> Bottleneck_Detected
-                                    </div>
-                                    <span className="text-[11px] font-bold text-foreground uppercase truncate max-w-[280px]">{slowestTest.title}</span>
+                                    <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500 mb-1 font-black tracking-wide text-[9px]">
+                                        <TrendingDown size={12} className="animate-pulse" />Bottleneck Detected</div>
+                                    <span className="text-[11px] font-bold text-foreground truncate max-w-[280px]">{slowestTest.title}</span>
                                 </div>
                                 <div className="text-2xl font-black text-rose-600 dark:text-rose-500 tabular-nums">{slowestTest.display}</div>
                             </div>
@@ -249,7 +248,7 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="FILTER_REGISTRY_OBJECTS..."
-                            className="w-full bg-background border border-border p-2.5 pl-10 text-[10px] text-foreground focus:border-muted outline-none uppercase placeholder:text-muted/50"
+                            className="w-full bg-background border border-border p-2.5 pl-10 text-[10px] text-foreground focus:border-muted outline-none placeholder:text-muted/50"
                         />
                     </div>
                     <div className="flex bg-background border border-border px-2 gap-2 items-center">
@@ -261,9 +260,8 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                 {/* GRAPHS SECTION */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 bg-border gap-px">
                     <div className="bg-background p-6 space-y-6">
-                        <p className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                            <Activity size={14} className="text-emerald-600 dark:text-emerald-500" /> Latency_Rank
-                        </p>
+                        <p className="text-[10px] font-black text-foreground tracking-wide flex items-center gap-2">
+                            <Activity size={14} className="text-emerald-600 dark:text-emerald-500" />Latency Rank</p>
                         <div className="h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={performanceChartData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
@@ -277,9 +275,9 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                                                 const d = payload[0].payload.fullData;
                                                 return (
                                                     <div className="bg-background border border-border p-4 shadow-2xl font-mono min-w-[220px]">
-                                                        <p className="text-[11px] font-bold text-foreground uppercase leading-relaxed mb-2">{d.title}</p>
-                                                        <div className="flex justify-between items-center text-[10px] mt-1 border-t border-border pt-2 text-muted uppercase">Latency: <span className="text-foreground font-black">{d.displayTime}</span></div>
-                                                        <div className="flex justify-between items-center text-[10px] text-muted uppercase">Steps: <span className="text-foreground font-black">{d.stepCount}</span></div>
+                                                        <p className="text-[11px] font-bold text-foreground leading-relaxed mb-2">{d.title}</p>
+                                                        <div className="flex justify-between items-center text-[10px] mt-1 border-t border-border pt-2 text-muted">Latency: <span className="text-foreground font-black">{d.displayTime}</span></div>
+                                                        <div className="flex justify-between items-center text-[10px] text-muted">Steps: <span className="text-foreground font-black">{d.stepCount}</span></div>
                                                     </div>
                                                 );
                                             }
@@ -297,9 +295,8 @@ export function BuildOverview({ buildId, buildData, historyData = [], onStopBuil
                     </div>
 
                     <div className="bg-background p-6 space-y-6">
-                        <p className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                            <ListTree size={14} className="text-indigo-600 dark:text-indigo-400" /> Complexity_Distribution
-                        </p>
+                        <p className="text-[10px] font-black text-foreground tracking-wide flex items-center gap-2">
+                            <ListTree size={14} className="text-indigo-600 dark:text-indigo-400" />Complexity Distribution</p>
                         <div className="h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={performanceChartData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
@@ -353,9 +350,9 @@ function KPIStat({ label, value, sub, icon, color }: any) {
                 <div className="text-muted group-hover:text-foreground transition-colors">{icon}</div>
                 <div className="w-1 h-1 bg-border rotate-45 group-hover:bg-foreground transition-colors" />
             </div>
-            <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-[9px] font-black text-muted tracking-wide mb-1">{label}</p>
             <p className={cn("text-2xl font-black tabular-nums tracking-tighter leading-none", textColors[color])}>{value}</p>
-            <p className="text-[8px] text-muted font-bold mt-3 uppercase tracking-tighter border-l border-border pl-2">{sub}</p>
+            <p className="text-[8px] text-muted font-bold mt-3 tracking-tighter border-l border-border pl-2">{sub}</p>
         </div>
     );
 }
@@ -365,7 +362,7 @@ function LegendItem({ label, value, color }: any) {
         <div className="flex items-center justify-between border-b border-border pb-1">
             <div className="flex items-center gap-2">
                 <div className={cn("w-1 h-3", color)} />
-                <span className="text-[8px] font-black text-muted uppercase tracking-widest">{label}</span>
+                <span className="text-[8px] font-black text-muted tracking-wide">{label}</span>
             </div>
             <span className="text-[10px] font-bold text-foreground tabular-nums">{value}</span>
         </div>
@@ -375,8 +372,8 @@ function LegendItem({ label, value, color }: any) {
 function SpecItem({ label, value, color }: any) {
     return (
         <div className="space-y-1">
-            <span className="text-[9px] font-black text-muted uppercase tracking-widest">{label}</span>
-            <p className={cn("text-xs font-bold uppercase tabular-nums", color)}>{value}</p>
+            <span className="text-[9px] font-black text-muted tracking-wide">{label}</span>
+            <p className={cn("text-xs font-bold tabular-nums", color)}>{value}</p>
         </div>
     );
 }
@@ -386,7 +383,7 @@ function FilterBtn({ active, label, onClick }: any) {
         <button
             onClick={onClick}
             className={cn(
-                "px-3 py-1 text-[8px] font-black uppercase tracking-tighter transition-all",
+                "px-3 py-1 text-[8px] font-black tracking-tighter transition-all",
                 active ? "bg-foreground text-background" : "text-muted hover:text-foreground"
             )}
         >

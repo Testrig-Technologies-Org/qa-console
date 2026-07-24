@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Bot, Coins, Loader2, Send, Sparkles, Square, ThumbsDown, ThumbsUp, User, Wrench } from "lucide-react";
-import { askIntelligence, getTokenUsageStats, submitChatFeedback } from "@/lib/chat";
+import { askIntelligence, getChatHistory, getTokenUsageStats, submitChatFeedback } from "@/lib/chat";
 import { cn } from "@/lib/utils";
 import { ChatChart } from "./ChatChart";
 import { chatChartKind } from "@/lib/chat-chart-types";
@@ -31,6 +31,7 @@ interface IntelligenceChatProps {
 
 export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [usage, setUsage] = useState<{ totalTokens: number; requests: number } | null>(null);
@@ -54,6 +55,14 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
 
   useEffect(() => { refreshUsage(); }, []);
 
+  useEffect(() => {
+    setHistoryLoaded(false);
+    getChatHistory(projectId).then((res) => {
+      if (res.success) setMessages(res.messages as ChatMessage[]);
+      setHistoryLoaded(true);
+    });
+  }, [projectId]);
+
   const send = async (question: string) => {
     const trimmed = question.trim();
     if (!trimmed || loading) return;
@@ -70,7 +79,7 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
 
     try {
       const outcome = await Promise.race([
-        askIntelligence(trimmed, history).then((res) => ({ kind: 'response' as const, res })),
+        askIntelligence(trimmed, history, projectId).then((res) => ({ kind: 'response' as const, res })),
         stopped.then((kind) => ({ kind })),
       ]);
 
@@ -114,23 +123,23 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
   };
 
   return (
-    <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden flex flex-col">
+    <div className="bg-background border border-border rounded-lg font-mono shadow-2xl overflow-hidden flex flex-col">
       <div className="px-6 py-3 border-b border-border bg-card/50 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Sparkles size={14} className="text-indigo-500" />
-          <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em]">Ask_Intelligence</span>
+          <span className="text-[10px] font-black text-foreground tracking-wide">Ask Intelligence</span>
         </div>
         {usage && usage.requests > 0 && (
-          <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted uppercase tracking-widest" title="LLM token usage, last 7 days">
+          <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted tracking-wide" title="LLM token usage, last 7 days">
             <Coins size={11} className="opacity-60" /> {usage.totalTokens.toLocaleString()} tokens · 7d
           </span>
         )}
       </div>
 
       <div ref={scrollRef} className="max-h-[420px] min-h-[160px] overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 && (
+        {historyLoaded && messages.length === 0 && (
           <div className="space-y-3">
-            <p className="text-[10px] text-muted font-bold uppercase tracking-widest opacity-60">
+            <p className="text-[10px] text-muted font-bold tracking-wide opacity-60">
               Ask about pass rates, flaky tests, recent builds, or failures for this project.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -169,7 +178,7 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
               {m.toolCalls && m.toolCalls.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 px-1">
                   {m.toolCalls.map((tc, j) => (
-                    <span key={j} className="flex items-center gap-1 text-[8px] font-bold text-muted uppercase tracking-widest bg-muted/10 border border-border px-1.5 py-0.5 rounded">
+                    <span key={j} className="flex items-center gap-1 text-[8px] font-bold text-muted tracking-wide bg-muted/10 border border-border px-1.5 py-0.5 rounded">
                       <Wrench size={9} /> {tc.name}
                     </span>
                   ))}
@@ -223,7 +232,7 @@ export function IntelligenceChat({ projectId, onChartPinned }: IntelligenceChatP
               <span className="flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Thinking...</span>
               <button
                 onClick={handleStop}
-                className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-400 transition-colors"
+                className="flex items-center gap-1 text-[9px] font-bold tracking-wide text-rose-500 hover:text-rose-400 transition-colors"
               >
                 <Square size={9} fill="currentColor" /> Stop
               </button>

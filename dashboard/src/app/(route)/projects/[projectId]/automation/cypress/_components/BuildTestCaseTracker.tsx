@@ -114,7 +114,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
   // 🟢 LOADING UI: Themed Terminal Sequence
   if (!tcRegistry) {
     return (
-      <div className="bg-background border border-border h-[600px] flex flex-col items-center justify-center font-mono uppercase overflow-hidden relative transition-colors duration-300">
+      <div className="bg-background border border-border h-[600px] flex flex-col items-center justify-center font-mono overflow-hidden relative transition-colors duration-300">
         <div className="absolute inset-0 opacity-[0.03] dark:opacity-10 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:40px_40px]" />
         
         <div className="relative flex flex-col items-center gap-6">
@@ -124,11 +124,11 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
           </div>
           
           <div className="text-center space-y-2">
-            <h2 className="text-xs font-black text-emerald-600 dark:text-emerald-500 tracking-[0.4em] animate-pulse">Initializing_Sync_Protocol</h2>
+            <h2 className="text-xs font-black text-emerald-600 dark:text-emerald-500 tracking-wide animate-pulse">Initializing Sync Protocol</h2>
             <div className="flex items-center justify-center gap-4 text-[10px] text-muted font-bold">
               <span>Build_ID: {safeBuildId}</span>
               <span className="w-1 h-1 bg-border rounded-full" />
-              <span className="animate-bounce">Scrubbing_Logs...</span>
+              <span className="animate-bounce">Scrubbing Logs...</span>
             </div>
           </div>
 
@@ -145,7 +145,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
   const passPercentage = Math.round((tcRegistry.passed / tcRegistry.total) * 100);
 
   return (
-    <div className="bg-background border border-border rounded-none font-mono shadow-2xl overflow-hidden mb-8 select-none animate-in fade-in duration-500 uppercase transition-colors duration-300">
+    <div className="bg-background border border-border rounded-lg font-mono shadow-2xl overflow-hidden mb-8 select-none animate-in fade-in duration-500 transition-colors duration-300">
       
       {/* 🟢 TOP PROGRESS BAR */}
       <div className="h-1.5 w-full bg-border flex">
@@ -158,13 +158,13 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/20"><Cpu size={16} className="text-emerald-500" /></div>
           <div>
-            <span className="text-[10px] font-black text-foreground uppercase tracking-[0.3em] block leading-none">System_Validation_Core</span>
+            <span className="text-[10px] font-black text-foreground tracking-wide block leading-none">System Validation Core</span>
             <span className="text-[8px] text-muted font-bold mt-1 block tracking-tighter opacity-50">BUILD_REF: {safeBuildId}</span>
           </div>
         </div>
         <div className="flex items-center gap-6">
             <div className="text-right">
-                <span className="text-[8px] font-bold text-muted block text-[7px] tracking-widest leading-none mb-1">STABILITY_SCORE</span>
+                <span className="text-[8px] font-bold text-muted block text-[7px] tracking-wide leading-none mb-1">Stability Score</span>
                 <span className={cn("text-sm font-black tracking-tighter", passPercentage > 80 ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500")}>{passPercentage}%</span>
             </div>
             <div className="h-8 w-px bg-border" />
@@ -172,9 +172,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                SYNC_ACTIVE
-            </div>
+                </span>Sync Active</div>
         </div>
       </div>
 
@@ -188,9 +186,8 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
         </div>
 
         <div className="lg:col-span-7 p-4 bg-background relative">
-            <div className="text-[8px] font-black text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Activity size={10} /> Node_Matrix_Mapping
-            </div>
+            <div className="text-[8px] font-black text-muted tracking-wide mb-3 flex items-center gap-2">
+                <Activity size={10} />Node Matrix Mapping</div>
             <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-2">
                 {tcRegistry.items.map(([id, data]) => (
                     <button
@@ -217,7 +214,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
             <div className="px-4 py-3 border-b border-border bg-card/50 flex justify-between items-center">
                 <div className="flex items-center gap-2 text-muted">
                     <ListTree size={12} />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Deep_Step_Analysis: {selectedId}</span>
+                    <span className="text-[9px] font-black tracking-tighter">Deep_Step_Analysis: {selectedId}</span>
                 </div>
             </div>
 
@@ -225,7 +222,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
                 {activeData ? (
                 <div className="divide-y divide-border/50">
                     <div className="p-5 bg-background/90 backdrop-blur-md sticky top-0 z-10 border-b border-border">
-                        <p className="text-[8px] text-emerald-600 dark:text-emerald-500 font-black mb-1 tracking-widest">SCENARIO</p>
+                        <p className="text-[8px] text-emerald-600 dark:text-emerald-500 font-black mb-1 tracking-wide">Scenario</p>
                         <p className="text-[12px] text-foreground font-black leading-tight tracking-tight">{activeData.title}</p>
                     </div>
 
@@ -234,7 +231,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
                         <div className="w-6 shrink-0 text-left text-[9px] font-black text-muted/50 group-hover:text-muted tabular-nums pt-1">{String(idx + 1).padStart(2, '0')}</div>
                         <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[10px] font-black text-muted uppercase tracking-widest">{step.command}</span>
+                                <span className="text-[10px] font-black text-muted tracking-wide">{step.command}</span>
                                 <span className="text-[8px] font-bold text-muted/40 tabular-nums bg-card px-1">{step.duration}</span>
                             </div>
                             <p className="text-[11px] text-foreground/60 font-mono break-all leading-relaxed bg-card/40 p-1 border-l border-border">{cleanAnsi(step.arguments)}</p>
@@ -243,7 +240,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
                     </div>
                     ))}
                 </div>
-                ) : <div className="h-full flex flex-col items-center justify-center opacity-20 text-[10px] font-black tracking-widest text-muted">SELECT_NODE_FOR_INSPECTION</div>}
+                ) : <div className="h-full flex flex-col items-center justify-center opacity-20 text-[10px] font-black tracking-wide text-muted">Select Node For Inspection</div>}
             </div>
           </div>
 
@@ -253,7 +250,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
             <div className="p-6 border-b border-border">
                 <div className="flex items-center gap-2 mb-4">
                     <AlertOctagon size={14} className="text-rose-500" />
-                    <span className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Fault_Occurrence_Matrix</span>
+                    <span className="text-[10px] font-black text-foreground tracking-wide">Fault Occurrence Matrix</span>
                 </div>
                 <div className="h-[150px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -275,7 +272,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
             <div className="p-6 border-b border-border">
                 <div className="flex items-center gap-2 mb-4 text-muted">
                     <AlertCircle size={14} className="opacity-50" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Step_Health_Ratio</span>
+                    <span className="text-[10px] font-black tracking-wide text-foreground">Step Health Ratio</span>
                 </div>
                 <div className="h-[150px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -293,7 +290,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
             <div className="p-6 border-b border-border">
                 <div className="flex items-center gap-2 mb-4">
                     <Layers size={14} className="text-sky-500" />
-                    <span className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Complexity_Flow</span>
+                    <span className="text-[10px] font-black text-foreground tracking-wide">Complexity Flow</span>
                 </div>
                 <div className="h-[150px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -314,7 +311,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
             <div className="p-6 border-b border-border last:border-b-0">
                 <div className="flex items-center gap-2 mb-4 text-emerald-500">
                     <Timer size={14} />
-                    <span className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Latency_Profile</span>
+                    <span className="text-[10px] font-black text-foreground tracking-wide">Latency Profile</span>
                 </div>
                 <div className="h-[140px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -336,11 +333,11 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
 
             <div className="grid grid-cols-2 gap-px bg-border border-t border-border mt-auto">
                 <div className="bg-background p-4 text-center">
-                    <span className="text-[7px] font-black text-muted tracking-widest uppercase block mb-1">Avg_Complexity</span>
+                    <span className="text-[7px] font-black text-muted tracking-wide block mb-1">Avg Complexity</span>
                     <span className="text-lg font-black text-foreground leading-none">{(tcRegistry.totalSteps / tcRegistry.total).toFixed(1)} <span className="text-[9px] text-muted font-bold">S/TC</span></span>
                 </div>
                 <div className="bg-background p-4 text-center">
-                    <span className="text-[7px] font-black text-muted tracking-widest uppercase block mb-1">Fault_Ratio</span>
+                    <span className="text-[7px] font-black text-muted tracking-wide block mb-1">Fault Ratio</span>
                     <span className="text-lg font-black text-rose-600 dark:text-rose-500 leading-none">{((graphData.reduce((a, b) => a + b.failedSteps, 0) / Math.max(1, tcRegistry.totalSteps)) * 100).toFixed(1)}%</span>
                 </div>
             </div>
@@ -354,7 +351,7 @@ export function BuildTestCaseTracker({ allTests, buildId }: { allTests: any[], b
 function MiniStat({ label, value, color }: any) {
   return (
     <div className="p-4 flex flex-col items-center justify-center gap-1 group hover:bg-muted/10 transition-all cursor-default text-center">
-      <span className="text-[7px] font-black text-muted uppercase tracking-widest group-hover:text-muted/80">{label}</span>
+      <span className="text-[7px] font-black text-muted tracking-wide group-hover:text-muted/80">{label}</span>
       <span className={cn("text-xl font-black tabular-nums tracking-tighter leading-none", color)}>{value}</span>
     </div>
   )

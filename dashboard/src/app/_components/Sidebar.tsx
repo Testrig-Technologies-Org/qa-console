@@ -15,8 +15,8 @@ export default function Sidebar() {
           <Command className="w-5 h-5 text-white" />
         </div>
         <div className="hidden lg:block">
-          <h1 className="font-bold text-foreground tracking-tight text-sm uppercase leading-none">QA_Console</h1>
-          <p className="text-[8px] font-mono text-muted uppercase leading-none mt-1">v4.0.2-stable</p>
+          <h1 className="font-bold text-foreground tracking-tight text-sm leading-none">TestOps</h1>
+          <p className="text-[8px] font-mono text-muted leading-none mt-1">v4.0.2-stable</p>
         </div>
       </div>
 
@@ -33,7 +33,7 @@ function NavItem({ icon, label, href, active }: any) {
     <Link 
       href={href} 
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 w-full transition-all duration-200 border-l-2 relative group rounded-none",
+        "flex items-center gap-3 px-3 py-2.5 w-full transition-all duration-200 border-l-2 relative group rounded-lg",
         active 
           ? "bg-card border-l-indigo-500 text-foreground" 
           : "border-l-transparent text-muted hover:bg-muted/10 hover:text-foreground"

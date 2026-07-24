@@ -48,7 +48,7 @@ export function LogTerminal({ test }: LogTerminalProps) {
       {/* Toggle Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500/70 text-[10px] font-black uppercase tracking-widest hover:text-emerald-500 transition-colors"
+        className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500/70 text-[10px] font-black tracking-wide hover:text-emerald-500 transition-colors"
       >
         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <Terminal size={14} />
@@ -70,7 +70,7 @@ export function LogTerminal({ test }: LogTerminalProps) {
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500/30" />
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/30" />
             </div>
-            <span className="text-[9px] font-mono text-muted ml-2">console_stream</span>
+            <span className="text-[9px] font-mono text-muted ml-2">console stream</span>
           </div>
 
           {/* Terminal Logs Content */}
@@ -105,9 +105,7 @@ export function LogTerminal({ test }: LogTerminalProps) {
 
               {extractLogs.stdout.length > 0 && extractLogs.stderr.length > 0 && (
                 <div className="my-4 border-t border-rose-500/20 pt-2">
-                  <span className="text-[9px] font-black text-rose-500/50 uppercase tracking-widest">
-                    stderr_trace_dump
-                  </span>
+                  <span className="text-[9px] font-black text-rose-500/50 tracking-wide">stderr trace dump</span>
                 </div>
               )}
 

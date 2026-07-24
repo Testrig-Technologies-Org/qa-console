@@ -22,8 +22,8 @@ export default function AuthLayout({
             <Command className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold tracking-tight text-sm uppercase leading-none text-zinc-900">QA_Console</h1>
-            <p className="text-[8px] font-mono text-zinc-400 uppercase leading-none mt-1">v4.0.2-stable</p>
+            <h1 className="font-bold tracking-tight text-sm leading-none text-zinc-900">TestOps</h1>
+            <p className="text-[8px] font-mono text-zinc-400 leading-none mt-1">v4.0.2-stable</p>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function AuthLayout({
           </div>
         </div>
 
-        <p className="relative z-10 text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
+        <p className="relative z-10 text-[9px] font-mono text-zinc-400 tracking-wide">
           © {new Date().getFullYear()} AWS Industrial — Secure Access Portal
         </p>
       </div>
@@ -54,7 +54,7 @@ export default function AuthLayout({
           <div className="w-7 h-7 bg-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.25)]">
             <Command className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-xs uppercase tracking-tight text-zinc-900">QA_Console</span>
+          <span className="font-bold text-xs tracking-tight text-zinc-900">TestOps</span>
         </div>
 
         <div className="w-full max-w-sm">{children}</div>

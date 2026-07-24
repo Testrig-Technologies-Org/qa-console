@@ -63,7 +63,7 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="QUERY_TEST_IDENTITY..."
-            className="w-full bg-[#09090b] border border-zinc-800 p-2.5 pl-10 text-[11px] text-white outline-none focus:border-zinc-600 uppercase tracking-widest"
+            className="w-full bg-[#09090b] border border-zinc-800 p-2.5 pl-10 text-[11px] text-white outline-none focus:border-zinc-600 tracking-wide"
           />
         </div>
         <div className="flex bg-[#09090b] border border-zinc-800 px-2 gap-1 items-center">
@@ -72,7 +72,7 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
               key={f}
               onClick={() => setFilter(f)}
               className={cn(
-                "px-3 py-1 text-[9px] font-black uppercase tracking-tighter transition-all",
+                "px-3 py-1 text-[9px] font-black tracking-tighter transition-all",
                 filter === f ? "bg-white text-black" : "text-zinc-600 hover:text-zinc-300"
               )}
             >
@@ -87,9 +87,9 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
         <div className="px-6 py-3 bg-zinc-950 border-b border-zinc-900 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Activity size={14} className="text-white" />
-            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Build_Execution_Registry</span>
+            <span className="text-[10px] font-black text-white tracking-wide">Build Execution Registry</span>
           </div>
-          <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest tabular-nums">
+          <span className="text-[9px] text-zinc-600 font-bold tracking-wide tabular-nums">
             Nodes_Resolved: {filteredTests.length}
           </span>
         </div>
@@ -116,8 +116,8 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
                         : "bg-rose-600 shadow-[0_0_10px_#e11d48]"
                     )} />
                     <div>
-                      <h3 className="text-[13px] font-bold text-zinc-200 group-hover:text-white transition-colors uppercase tracking-tight">{t.title}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-[9px] text-zinc-600 font-bold uppercase tracking-widest">
+                      <h3 className="text-[13px] font-bold text-zinc-200 group-hover:text-white transition-colors tracking-tight">{t.title}</h3>
+                      <div className="flex items-center gap-4 mt-1 text-[9px] text-zinc-600 font-bold tracking-wide">
                         <span className="flex items-center gap-1"><FileCode size={10} /> {t.specFile}</span>
                         <span className="w-1 h-1 bg-zinc-800 rounded-full" />
                         <span className="flex items-center gap-1"><Clock size={10} /> {t.duration}</span>
@@ -145,9 +145,8 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
                     {/* DETAIL GRID: METADATA & ERROR */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                       <div className="space-y-6">
-                        <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <Cpu size={12} /> Execution_Metadata
-                        </h4>
+                        <h4 className="text-[10px] font-black text-zinc-500 tracking-wide flex items-center gap-2">
+                          <Cpu size={12} />Execution Metadata</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <MetaItem label="Browser" value={t.browser} icon={<Globe size={10} />} />
                           <MetaItem label="Run_Number" value={t.run_number || '01'} icon={<Layers size={10} />} />
@@ -158,9 +157,8 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
 
                       {t.error && (
                         <div className="space-y-4">
-                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <ShieldAlert size={12} /> Exception_Handshake
-                          </h4>
+                          <h4 className="text-[10px] font-black text-rose-500 tracking-wide flex items-center gap-2">
+                            <ShieldAlert size={12} />Exception Handshake</h4>
                           <div className="bg-rose-950/10 border border-rose-900/30 p-4 font-mono">
                             <p className="text-[11px] text-rose-400 font-bold mb-2">{t.error.message}</p>
                             <pre className="text-[10px] text-rose-500/60 overflow-x-auto custom-scrollbar whitespace-pre-wrap leading-relaxed">
@@ -174,18 +172,17 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
                     {/* EXECUTION STEPS (Maintained) */}
                     {t.steps?.length > 0 && (
                       <div className="space-y-6">
-                        <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <Code2 size={12} className="text-white" /> Command_Pipeline_Flow
-                        </h4>
+                        <h4 className="text-[10px] font-black text-zinc-500 tracking-wide flex items-center gap-2">
+                          <Code2 size={12} className="text-white" />Command Pipeline Flow</h4>
                         <div className="relative pl-12 space-y-0.5">
                           <div className="absolute left-[20px] top-0 bottom-0 w-px bg-zinc-800" />
                           {t.steps.map((step: any, sIdx: number) => (
                             <div key={sIdx} className="group/step flex items-center min-h-[36px] relative hover:bg-white/[0.02]">
-                              <div className="absolute left-[-32px] w-2 h-2 rounded-none bg-zinc-950 border border-zinc-700 group-hover/step:border-white transition-all z-10 rotate-45" />
+                              <div className="absolute left-[-32px] w-2 h-2 rounded-lg bg-zinc-950 border border-zinc-700 group-hover/step:border-white transition-all z-10 rotate-45" />
                               <div className="flex-1 flex items-center justify-between pr-4">
                                 <div className="flex items-center gap-4">
                                   <span className="text-[10px] font-bold text-zinc-700 w-6">{String(sIdx + 1).padStart(2, '0')}</span>
-                                  <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-tight">{step.command}</span>
+                                  <span className="text-[11px] font-bold text-zinc-300 tracking-tight">{step.command}</span>
                                   <span className="text-[11px] text-zinc-600 truncate max-w-md italic">{step.arguments}</span>
                                 </div>
                                 <span className="text-[9px] text-zinc-700 tabular-nums">{step.duration}</span>
@@ -199,9 +196,8 @@ export function BuildTestRegistry({ buildData }: { buildData: any }) {
                     {/* VIDEO ARTIFACT */}
                     {t.video_url && (
                       <div className="pt-4">
-                        <a href={t.video_url} target="_blank" className="inline-flex items-center gap-3 px-6 py-2 border border-zinc-800 hover:border-white text-[10px] font-black uppercase tracking-widest transition-all">
-                          <Video size={14} /> Replay_Session_Artifact
-                        </a>
+                        <a href={t.video_url} target="_blank" className="inline-flex items-center gap-3 px-6 py-2 border border-zinc-800 hover:border-white text-[10px] font-black tracking-wide transition-all">
+                          <Video size={14} />Replay Session Artifact</a>
                       </div>
                     )}
                   </div>
@@ -219,9 +215,9 @@ function MetaItem({ label, value, icon, className }: any) {
     <div className={cn("bg-black border border-zinc-900 p-3", className)}>
       <div className="flex items-center gap-2 text-zinc-600 mb-1">
         {icon}
-        <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+        <span className="text-[8px] font-black tracking-wide">{label}</span>
       </div>
-      <p className="text-[11px] text-zinc-200 uppercase font-bold truncate">{value}</p>
+      <p className="text-[11px] text-zinc-200 font-bold truncate">{value}</p>
     </div>
   );
 }

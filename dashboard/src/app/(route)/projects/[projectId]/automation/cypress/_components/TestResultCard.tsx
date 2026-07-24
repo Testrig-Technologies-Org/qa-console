@@ -24,7 +24,7 @@ export function TestResultCard({ test, isExpanded, onToggle }: any) {
 
   return (
     <div className={cn(
-      "border bg-background rounded-none mb-0.5 transition-all font-mono",
+      "border bg-background rounded-lg mb-0.5 transition-all font-mono",
       isPassed ? "border-border hover:border-emerald-500/50" : 
       isFailed ? "border-border hover:border-rose-500/50" : "border-border",
       isExpanded && (isPassed ? "border-emerald-500 shadow-xl" : "border-rose-500 shadow-xl")
@@ -37,13 +37,13 @@ export function TestResultCard({ test, isExpanded, onToggle }: any) {
             {isPassed ? <CheckCircle2 size={18} strokeWidth={2.5} /> : <XCircle size={18} strokeWidth={2.5} />}
           </div>
           <div className="flex flex-col">
-            <h3 className="text-[13px] font-bold text-foreground uppercase tracking-tight truncate max-w-2xl">
+            <h3 className="text-[13px] font-bold text-foreground tracking-tight truncate max-w-2xl">
                 {cleanAnsi(test.title)}
             </h3>
             <div className="flex items-center gap-2 mt-0.5">
-               <span className="text-[8px] font-black text-muted uppercase tracking-widest leading-none">Protocol: Execution_Registry</span>
+               <span className="text-[8px] font-black text-muted tracking-wide leading-none">Protocol: Execution_Registry</span>
                <span className="w-1 h-1 bg-border rounded-full" />
-               <span className="text-[8px] font-black text-muted uppercase tracking-widest leading-none">Ref: #RUN-{test.run_number}</span>
+               <span className="text-[8px] font-black text-muted tracking-wide leading-none">Ref: #RUN-{test.run_number}</span>
             </div>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function TestResultCard({ test, isExpanded, onToggle }: any) {
                     {/* Step Icon Node */}
                     <div className="relative w-6 shrink-0 flex justify-center z-10 h-full mt-1.5">
                       <div className={cn(
-                        "w-2 h-2 rounded-none rotate-45 border border-background z-20 transition-all",
+                        "w-2 h-2 rounded-lg rotate-45 border border-background z-20 transition-all",
                         stepStatus === 'failed' ? "bg-rose-500 shadow-[0_0_8px_rgba(225,29,72,0.4)]" : 
                         isTestCaseStart ? "bg-emerald-400 scale-125 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : 
                         "bg-muted group-hover:bg-foreground/50"
@@ -108,13 +108,13 @@ export function TestResultCard({ test, isExpanded, onToggle }: any) {
                     <div className="flex-1 flex flex-col gap-1 px-4 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={cn(
-                            "text-[11px] font-black uppercase tracking-tighter shrink-0",
+                            "text-[11px] font-black tracking-tighter shrink-0",
                             stepStatus === 'failed' ? "text-rose-500" : isTestCaseStart ? "text-emerald-500" : "text-muted"
                         )}>
                             {isTestCaseStart && <Target size={10} className="inline mr-1 mb-0.5" />}
                             {step.command}
                         </span>
-                        <span className="text-[9px] text-muted/40 font-bold tabular-nums ml-auto px-4 uppercase">
+                        <span className="text-[9px] text-muted/40 font-bold tabular-nums ml-auto px-4">
                             {step.duration}
                         </span>
                       </div>
@@ -135,7 +135,7 @@ export function TestResultCard({ test, isExpanded, onToggle }: any) {
           {/* Failure Log Box */}
           {isFailed && (
             <div className="p-6 bg-rose-500/5 border-t border-rose-500/20">
-               <div className="flex items-center gap-2 text-rose-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">
+               <div className="flex items-center gap-2 text-rose-500 text-[10px] font-black tracking-wide mb-4">
                  Exception_Trace_Dump
                </div>
                <div className="space-y-4">

@@ -26,7 +26,7 @@ export function FlakyTests({ projectId }: FlakyTestsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-muted text-[10px] font-bold uppercase tracking-widest p-6">
+      <div className="flex items-center gap-2 text-muted text-[10px] font-bold tracking-wide p-6">
         <Loader2 size={12} className="animate-spin" /> Scanning build history...
       </div>
     );
@@ -34,7 +34,7 @@ export function FlakyTests({ projectId }: FlakyTestsProps) {
 
   if (flaky.length === 0) {
     return (
-      <div className="p-6 text-[10px] text-muted font-bold uppercase tracking-widest opacity-60">
+      <div className="p-6 text-[10px] text-muted font-bold tracking-wide opacity-60">
         No flaky tests detected in the last 60 days.
       </div>
     );
@@ -46,7 +46,7 @@ export function FlakyTests({ projectId }: FlakyTestsProps) {
         <div key={`${t.specFile}::${t.title}`} className="p-6 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-bold text-foreground truncate">{t.title}</p>
-            <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted font-bold tracking-wide">
               <span className="truncate max-w-[220px]">{t.specFile}</span>
               <span className="w-1 h-1 bg-border rounded-full shrink-0" />
               <span>{t.flakyRuns}/{t.totalRuns} runs flaky</span>

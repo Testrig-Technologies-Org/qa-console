@@ -25,7 +25,7 @@ export function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={cn(
-      "text-[9px] px-2 py-0.5 rounded-none font-black tracking-widest uppercase whitespace-nowrap border transition-all duration-300",
+      "text-[9px] px-2 py-0.5 rounded-lg font-black tracking-wide whitespace-nowrap border transition-all duration-300",
       colorStyles
     )}>
       {status || 'N/A'}

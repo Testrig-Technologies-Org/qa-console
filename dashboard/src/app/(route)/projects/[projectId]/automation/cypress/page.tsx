@@ -183,7 +183,7 @@ function AutomationDashboardContent() {
           <div className="p-5 border-b border-border bg-card/50 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Server size={14} className="text-muted" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">Registry</span>
+              <span className="text-[10px] font-bold tracking-wide text-foreground">Registry</span>
             </div>
             <button
               onClick={() => { setSelectedBuild(null); setBuildDetails(null); setShowRequirementAnalysis(false); }}
@@ -205,10 +205,10 @@ function AutomationDashboardContent() {
                 )}
               >
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] font-mono font-bold text-foreground uppercase">Build_Ref_{b.id}</span>
+                  <span className="text-[10px] font-mono font-bold text-foreground">Build_Ref_{b.id}</span>
                   <StatusBadge status={b.status} />
                 </div>
-                <div className="flex items-center gap-3 text-[9px] text-muted font-bold uppercase">
+                <div className="flex items-center gap-3 text-[9px] text-muted font-bold">
                   <Calendar size={10} /> {new Date(b.createdAt).toLocaleDateString()} 
                   <span className="opacity-30">•</span> {b.environment}
                 </div>
@@ -222,7 +222,7 @@ function AutomationDashboardContent() {
         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
           {!selectedBuild ? (
             <div className="space-y-8 animate-in fade-in duration-700">
-              <header className="border-b border-border pb-8 uppercase tracking-widest">
+              <header className="border-b border-border pb-8 tracking-wide">
                 <h1 className="text-3xl font-bold text-foreground">Cypress Command Center</h1>
               </header>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -237,7 +237,7 @@ function AutomationDashboardContent() {
               <div className="flex justify-between items-center bg-card/20 p-4 border border-border">
                  <div className="flex items-center gap-4">
                    <div className="p-2 bg-indigo-500/10 border border-indigo-500/20"><Command size={16} className="text-indigo-500" /></div>
-                   <h2 className="text-[11px] font-black text-foreground uppercase tracking-[0.2em]">
+                   <h2 className="text-[11px] font-black text-foreground tracking-wide">
                      Build_Registry / ID: {selectedBuild.id}
                    </h2>
                  </div>
@@ -245,7 +245,7 @@ function AutomationDashboardContent() {
                  <button 
                   onClick={() => setShowRequirementAnalysis(!showRequirementAnalysis)}
                   className={cn(
-                    "flex items-center gap-2 px-6 py-2 text-[10px] font-black uppercase tracking-widest transition-all border",
+                    "flex items-center gap-2 px-6 py-2 text-[10px] font-black tracking-wide transition-all border",
                     showRequirementAnalysis 
                       ? "bg-foreground text-background border-foreground" 
                       : "bg-indigo-600/10 border-indigo-500/30 text-indigo-500 hover:bg-indigo-500 hover:text-white"
@@ -268,19 +268,19 @@ function AutomationDashboardContent() {
                   {loadingDetails ? (
                     <div className="h-96 flex flex-col items-center justify-center gap-4 text-muted">
                       <Loader2 className="animate-spin w-6 h-6" />
-                      <span className="text-[9px] font-mono uppercase tracking-widest">Extracting_Artifacts_From_Registry</span>
+                      <span className="text-[9px] font-mono tracking-wide">Extracting Artifacts From Registry</span>
                     </div>
                   ) : (
                     <div className="space-y-6">
                       {Object.entries(specGroups).map(([name, group]: [string, any]) => (
-                        <div key={name} className="bg-card border border-border rounded-none overflow-hidden flex flex-col shadow-xl">
+                        <div key={name} className="bg-card border border-border rounded-lg overflow-hidden flex flex-col shadow-xl">
                           <div className="px-6 py-4 border-b border-border bg-card/50 flex justify-between items-center">
                             <div className="flex items-center gap-4">
                               <div className="p-2 border border-border"><FileText size={14} className="text-muted" /></div>
-                              <h3 className="text-xs font-bold text-foreground font-mono uppercase">{name.split('/').pop()}</h3>
+                              <h3 className="text-xs font-bold text-foreground font-mono">{name.split('/').pop()}</h3>
                             </div>
                             <div className="flex items-center gap-4">
-                              <div className="w-32 h-1 bg-border rounded-none overflow-hidden flex">
+                              <div className="w-32 h-1 bg-border rounded-lg overflow-hidden flex">
                                 <div className="h-full bg-emerald-500" style={{ width: `${(group.stats.passed / group.totalTests) * 100}%` }} />
                                 <div className="h-full bg-rose-500" style={{ width: `${(group.stats.failed / group.totalTests) * 100}%` }} />
                               </div>
@@ -317,10 +317,10 @@ export default function AutomationDashboard() {
 function StatCard({ title, value, icon, color }: any) {
   const accents: any = { indigo: 'border-t-indigo-500', emerald: 'border-t-emerald-500', zinc: 'border-t-border' };
   return (
-    <div className={cn("bg-card border border-border border-t-2 rounded-none p-8 flex flex-col justify-between min-h-[160px]", accents[color])}>
+    <div className={cn("bg-card border border-border border-t-2 rounded-lg p-8 flex flex-col justify-between min-h-[160px]", accents[color])}>
       <div className="text-muted">{icon}</div>
       <div>
-        <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">{title}</h3>
+        <h3 className="text-[10px] font-bold text-muted tracking-wide mb-1">{title}</h3>
         <div className="text-5xl font-bold text-foreground tracking-tighter font-mono">{value ?? '0'}</div>
       </div>
     </div>

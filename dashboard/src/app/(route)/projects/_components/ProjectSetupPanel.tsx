@@ -46,10 +46,10 @@ export function ProjectSetupPanel({ projectId, apiKey, onKeyRegenerated }: Proje
   const maskedKey = apiKey.length > 12 ? `${apiKey.slice(0, 8)}${"•".repeat(20)}${apiKey.slice(-4)}` : apiKey;
 
   return (
-    <div className="bg-card border border-border rounded-none">
+    <div className="bg-card border border-border rounded-lg">
       <div className="px-6 py-4 border-b border-border bg-muted/5 flex items-center gap-3">
         <KeyRound size={14} className="text-indigo-500" />
-        <span className="text-[11px] font-black text-foreground uppercase tracking-[0.2em]">Playwright_Setup_Credentials</span>
+        <span className="text-[11px] font-black text-foreground tracking-wide">Playwright Setup Credentials</span>
       </div>
 
       <div className="p-6 space-y-5">
@@ -57,7 +57,7 @@ export function ProjectSetupPanel({ projectId, apiKey, onKeyRegenerated }: Proje
         <Field label="Project ID" value={String(projectId)} onCopy={() => copy("projectId", String(projectId))} copied={copiedField === "projectId"} />
 
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">API Key</label>
+          <label className="text-[10px] font-bold text-muted tracking-wide block">API Key</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-background border border-border px-3 py-2.5 text-sm font-mono text-foreground truncate">
               {revealed ? apiKey : maskedKey}
@@ -81,12 +81,12 @@ export function ProjectSetupPanel({ projectId, apiKey, onKeyRegenerated }: Proje
               <RefreshCw size={14} className={cn(regenerating && "animate-spin")} />
             </button>
           </div>
-          <p className="text-[9px] text-muted uppercase tracking-widest">Treat this like a password — anyone with it can submit results to this project.</p>
+          <p className="text-[9px] text-muted tracking-wide">Treat this like a password — anyone with it can submit results to this project.</p>
         </div>
 
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold text-muted uppercase tracking-widest flex items-center gap-2">
+            <label className="text-[10px] font-bold text-muted tracking-wide flex items-center gap-2">
               <Terminal size={12} /> playwright-tests/.env
             </label>
             <CopyButton onClick={() => copy("env", envSnippet)} copied={copiedField === "env"} label="Copy_All" />
@@ -103,7 +103,7 @@ export function ProjectSetupPanel({ projectId, apiKey, onKeyRegenerated }: Proje
 function Field({ label, value, onCopy, copied }: { label: string; value: string; onCopy: () => void; copied: boolean }) {
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">{label}</label>
+      <label className="text-[10px] font-bold text-muted tracking-wide block">{label}</label>
       <div className="flex items-center gap-2">
         <div className="flex-1 bg-background border border-border px-3 py-2.5 text-sm font-mono text-foreground truncate">
           {value}
@@ -124,7 +124,7 @@ function CopyButton({ onClick, copied, label }: { onClick: () => void; copied: b
         copied
           ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/5"
           : "border-border bg-background text-muted hover:text-foreground",
-        label && "px-3 text-[10px] font-bold uppercase tracking-widest"
+        label && "px-3 text-[10px] font-bold tracking-wide"
       )}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}

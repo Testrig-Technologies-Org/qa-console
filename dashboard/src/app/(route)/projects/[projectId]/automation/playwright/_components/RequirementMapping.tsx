@@ -17,11 +17,11 @@ export function RequirementMapping({ masterData }: { masterData: any[] }) {
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-2">
               <BookOpenCheck className="w-4 h-4 text-indigo-500" />
-              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 tracking-wide">
                 Manual Requirement
               </span>
             </div>
-            <span className="px-2 py-0.5 bg-muted/10 border border-border rounded text-[8px] font-black text-muted uppercase">
+            <span className="px-2 py-0.5 bg-muted/10 border border-border rounded text-[8px] font-black text-muted">
               {req.priority}
             </span>
           </div>
@@ -36,7 +36,7 @@ export function RequirementMapping({ masterData }: { masterData: any[] }) {
             <div className="space-y-4">
               {/* Manual Steps Box */}
               <div className="space-y-2">
-                <span className="flex items-center gap-2 text-[9px] font-black text-muted uppercase">
+                <span className="flex items-center gap-2 text-[9px] font-black text-muted">
                   <ClipboardCheck className="w-3 h-3" /> Manual Steps
                 </span>
                 <div className="text-[11px] text-muted leading-relaxed bg-background p-3 rounded-xl border border-border whitespace-pre-wrap">
@@ -46,7 +46,7 @@ export function RequirementMapping({ masterData }: { masterData: any[] }) {
 
               {/* Expected Outcome Box */}
               <div className="space-y-2">
-                <span className="flex items-center gap-2 text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase">
+                <span className="flex items-center gap-2 text-[9px] font-black text-emerald-600 dark:text-emerald-500">
                   <Target className="w-3 h-3" /> Expected Outcome
                 </span>
                 <div className="text-[11px] text-muted bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">

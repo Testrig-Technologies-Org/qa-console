@@ -44,7 +44,7 @@ export const PinnedCharts = React.forwardRef<PinnedChartsHandle, { projectId: nu
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-muted text-[10px] font-bold uppercase tracking-widest p-6">
+      <div className="flex items-center gap-2 text-muted text-[10px] font-bold tracking-wide p-6">
         <Loader2 size={12} className="animate-spin" /> Loading pinned charts...
       </div>
     );
@@ -52,7 +52,7 @@ export const PinnedCharts = React.forwardRef<PinnedChartsHandle, { projectId: nu
 
   if (charts.length === 0) {
     return (
-      <div className="p-6 text-[10px] text-muted font-bold uppercase tracking-widest opacity-60">
+      <div className="p-6 text-[10px] text-muted font-bold tracking-wide opacity-60">
         No pinned charts yet — click Add on a chart in Ask_Intelligence to save it here.
       </div>
     );
@@ -61,7 +61,7 @@ export const PinnedCharts = React.forwardRef<PinnedChartsHandle, { projectId: nu
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-6">
       {charts.map((c) => (
-        <div key={c.id} className="relative bg-background border border-border rounded-xl p-3">
+        <div key={c.id} className="relative bg-background border border-border rounded-xl p-4 pb-5">
           <button
             onClick={() => handleRemove(c.id)}
             disabled={removingId === c.id}

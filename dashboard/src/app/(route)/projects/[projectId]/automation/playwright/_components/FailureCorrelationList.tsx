@@ -53,7 +53,7 @@ export function FailureCorrelationList({ buildId, failedTests }: FailureCorrelat
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-muted text-[10px] font-bold uppercase tracking-widest p-6">
+      <div className="flex items-center gap-2 text-muted text-[10px] font-bold tracking-wide p-6">
         <Loader2 size={12} className="animate-spin" /> Scanning failure history...
       </div>
     );
@@ -63,7 +63,7 @@ export function FailureCorrelationList({ buildId, failedTests }: FailureCorrelat
 
   return (
     <div>
-      <div className="px-6 py-2.5 border-b border-border bg-muted/5 text-[9px] font-bold text-muted uppercase tracking-widest">
+      <div className="px-6 py-2.5 border-b border-border bg-muted/5 text-[9px] font-bold text-muted tracking-wide">
         {failedTests.length} failure{failedTests.length === 1 ? '' : 's'} analyzed · {withMatches} with a similar past match
       </div>
       <div className="divide-y divide-border">
@@ -80,7 +80,7 @@ export function FailureCorrelationList({ buildId, failedTests }: FailureCorrelat
             >
               <div className="flex items-center gap-3 min-w-0">
                 <Bug size={14} className="text-rose-600 dark:text-rose-500 shrink-0" />
-                <span className="text-xs font-bold text-foreground uppercase tracking-tight truncate">{t.title}</span>
+                <span className="text-xs font-bold text-foreground tracking-tight truncate">{t.title}</span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 {matchCount > 0 && (
@@ -89,7 +89,7 @@ export function FailureCorrelationList({ buildId, failedTests }: FailureCorrelat
                   </span>
                 )}
                 {bucket?.pending && (
-                  <span className="text-[9px] font-bold text-muted uppercase tracking-widest opacity-60">Pending</span>
+                  <span className="text-[9px] font-bold text-muted tracking-wide opacity-60">Pending</span>
                 )}
                 {isOpen ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
               </div>

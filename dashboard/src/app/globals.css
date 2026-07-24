@@ -9,6 +9,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-border: var(--border);
+  --color-muted: var(--muted);
+  --radius-card: var(--radius-card);
 }
 
 :root {
@@ -16,6 +18,11 @@
   --foreground: #09090b;
   --border: #e4e4e7;
   --card: #f9f9fb;
+  /* Was never defined despite text-muted/bg-muted being used in 40+ components — those classes
+     generated no CSS at all, so "muted" text silently rendered at full foreground contrast
+     instead of the secondary/dimmed color it was meant to be. */
+  --muted: #71717a;
+  --radius-card: 0.625rem;
 }
 
 /* next-themes will inject this class into the <html> tag */
@@ -24,6 +31,7 @@
   --foreground: #fafafa;
   --border: #27272a;
   --card: #121214;
+  --muted: #a1a1aa;
 }
 
 /* Custom Scrollbar */
